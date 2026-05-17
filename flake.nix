@@ -66,6 +66,11 @@
       url = "github:SpotX-Official/SpotX-Bash";
       flake = false;
     };
+
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
@@ -84,10 +89,13 @@
             ./hosts/viator
           ];
         };
-        nixosConfigurations.basalt-vps = inputs.nixpkgs.lib.nixosSystem {
+        nixosConfigurations.vps = inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = { inherit inputs; };
-          modules = [ ./hosts/basalt-vps ];
+          modules = [
+            inputs.disko.nixosModules.disko
+            ./hosts/vps
+          ];
         };
       };
     };

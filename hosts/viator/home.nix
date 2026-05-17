@@ -86,6 +86,9 @@ in {
       hyperfine
       watchexec
 
+      ghidra-bin
+      # ghidra-extensions
+
       # Networking / transfer
       xh
       aria2
@@ -128,6 +131,11 @@ in {
       # spotify is already installed by spicetify-nix
       ghostty-bin
       raycast
+
+      claude-code
+      codex
+      iina
+      t3code
     ];
 
     shell.enableFishIntegration = true;

@@ -105,7 +105,7 @@ in {
     taps = {
       "homebrew/homebrew-cask" = inputs.tap-brew-cask;
     };
-    mutableTaps = false;
+    mutableTaps = true;
   };
 
   homebrew = {
@@ -115,12 +115,13 @@ in {
     # Keep darwin-rebuild deterministic and fast. Upgrade casks manually when you
     # actually want to pay the network/update cost.
     global = {
-      autoUpdate = false;
+      # autoUpgrade = true;
+      autoUpdate = true;
       brewfile = true;
     };
 
     onActivation = {
-      cleanup = "zap";
+      cleanup = "uninstall";
       autoUpdate = false;
       upgrade = false;
     };
@@ -275,16 +276,9 @@ in {
     primaryUser = user.name;
 
     activationScripts = {
-      extraActivation.text = ''
-            echo "setting desktop wallpaper..."
-
-            uid="$(/usr/bin/id -u ${user.name})"
-
-            /bin/launchctl asuser "$uid" /usr/bin/sudo -u ${user.name} /usr/bin/osascript <<'EOF'
-              tell application "System Events"
-                set picture of every desktop to POSIX file "${wallpaper}"
-              end tell
-        EOF
+      postActivation.text = ''
+        set -euo pipefail
+        ${pkgs.desktoppr}/bin/desktoppr ${wallpaper}
       '';
       preActivation.text = ''
         echo "Disabling Spotlight indexing..."
@@ -303,6 +297,7 @@ in {
 
     defaults = {
       NSGlobalDomain = {
+        AppleEnableSwipeNavigateWithScrolls = true;
         AppleInterfaceStyle = "Dark";
         # Koda-ish system accent/highlight: restrained blue, not neon confetti.
         # AppleAccentColor = 4;
@@ -314,7 +309,6 @@ in {
         AppleSpacesSwitchOnActivate = false;
         AppleWindowTabbingMode = "manual";
         AppleEnableMouseSwipeNavigateWithScrolls = false;
-        AppleEnableSwipeNavigateWithScrolls = false;
         ApplePressAndHoldEnabled = false;
         NSAutomaticCapitalizationEnabled = false;
         NSAutomaticDashSubstitutionEnabled = false;
@@ -384,7 +378,7 @@ in {
       trackpad = {
         Clicking = true;
         TrackpadRightClick = true;
-        TrackpadThreeFingerDrag = true;
+        TrackpadThreeFingerDrag = false;
         TrackpadThreeFingerHorizSwipeGesture = 0;
         TrackpadThreeFingerVertSwipeGesture = 2;
         TrackpadFourFingerHorizSwipeGesture = 0;
