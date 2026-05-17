@@ -1,0 +1,30 @@
+{
+    "nix.enableLanguageServer": true,
+    "nix.serverPath": "nixd",
+    "nix.formatterPath": "alejandra",
+    "nix.serverSettings": {
+        "nixd": {
+            "formatting": {
+                "command": [
+                    "alejandra"
+                ]
+            },
+            "nixpkgs": {
+                "expr": "let flake = builtins.getFlake \"${workspaceFolder}\"; in import flake.inputs.nixpkgs { system = builtins.currentSystem; }"
+            },
+            "options": {
+                "darwin": {
+                    "expr": "(builtins.getFlake \"${workspaceFolder}\").darwinConfigurations.viator.options"
+                },
+                "home-manager": {
+                    "expr": "(builtins.getFlake \"${workspaceFolder}\").darwinConfigurations.viator.options.home-manager.users.type.getSubOptions []"
+                },
+                "nixvim": {
+                    "expr": "let system = builtins.currentSystem; flake = builtins.getFlake \"${workspaceFolder}\"; in flake.inputs.nixvim.nixvimConfigurations.${system}.default.options"
+                    // "expr": "let flake = builtins.getFlake \"${workspaceFolder}\"; pkgs = import flake.inputs.nixpkgs { system = builtins.currentSystem; }; hm = flake.inputs.home-manager.lib.homeManagerConfiguration { inherit pkgs; modules = [ flake.inputs.nixvim.homeModules.nixvim { home.stateVersion = \"26.05\"; home.username = \"conor\"; home.homeDirectory = \"/Users/conor\"; } ]; }; in hm.options.programs.nixvim.type.getSubOptions []"
+                }
+            }
+        }
+    },
+    "nixEnvSelector.nixFile": "${workspaceFolder}/flake.nix"
+}

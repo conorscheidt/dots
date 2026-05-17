@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,6 +39,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nix-search-tv = {
+      url = "github:3timeslazy/nix-search-tv";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nix-homebrew = {
       url = "github:zhaofengli/nix-homebrew";
     };
@@ -41,71 +51,43 @@
       url = "github:homebrew/homebrew-cask";
       flake = false;
     };
+
+    zjstatus = {
+      url = "github:dj95/zjstatus";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    spotx-bash = {
+      url = "github:SpotX-Official/SpotX-Bash";
+      flake = false;
+    };
   };
 
-  outputs =
-    inputs:
-    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
+  outputs = inputs:
+    inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       systems = [
         "aarch64-darwin"
         "x86_64-linux"
       ];
-      perSystem =
-        {
-          system,
-          pkgs,
-          lib,
-          ...
-        }:
-        let
-          inherit (pkgs.stdenv) hostPlatform;
-          # TODO: Neovim configuration for flake dev
-          commonDevPackages = with pkgs; [
-            statix
-            deadnix
-
-            nixfmt
-            alejandra
-
-            nil
-            nixd
-
-            nodejs_25
-          ];
-          darwinDevPackages = with pkgs; lib.optionals hostPlatform.isDarwin [ tart ];
-          linuxDevPackages = with pkgs; lib.optionals hostPlatform.isLinux [ ];
-        in
-        {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
-            config = {
-              allowUnfree = true;
-            };
-          };
-
-          devShells.default = pkgs.mkShellNoCC {
-            packages = commonDevPackages ++ darwinDevPackages ++ linuxDevPackages;
-          };
-
-        };
-
       flake = {
-        darwinConfigurations.macbook = inputs.nix-darwin.lib.darwinSystem {
+        darwinConfigurations.viator = inputs.nix-darwin.lib.darwinSystem {
           system = "aarch64-darwin";
           specialArgs = {
             inherit inputs;
           };
           modules = [
-            ./hosts/macbook
+            ./hosts/viator
           ];
         };
-        # NOTE: should we use nixos-unstable nixpkgs?
-        nixosConfigurations.vps = inputs.nixpkgs.lib.nixosSystem {
+        nixosConfigurations.basalt-vps = inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           specialArgs = { inherit inputs; };
-          modules = [
-            ./hosts/vps
-          ];
+          modules = [ ./hosts/basalt-vps ];
         };
       };
     };

@@ -1,319 +1,175 @@
+{ pkgs, lib, ... }:
 {
-  pkgs,
-  config,
-  ...
-}:
-let
-  hostName = "vps";
-  rootDisk = "/dev/disk/by-uuid/a03c79b4-0622-43d7-ac01-d24cdd70e685";
-in
-{
-  nixpkgs = {
-    overlays = [
-      (final: prev: {
-        ccacheWrapper = prev.ccacheWrapper.override {
-          extraConfig = ''
-            export CCACHE_COMPRESS=1
-            export CCACHE_DIR="${config.programs.ccache.cacheDir}"
-            export CCACHE_UMASK=007
-            export CCACHE_SLOPPINESS=random_seed
-            if [ ! -d "$CCACHE_DIR" ]; then
-              echo "Directory '$CCACHE_DIR' does not exist"
-              exit 1
-            fi
-            if [ ! -w "$CCACHE_DIR" ]; then
-              echo "Directory '$CCACHE_DIR' is not accessible for user $(whoami)"
-              exit 1
-            fi
-          '';
-        };
+  system.stateVersion = "25.05";
 
-      })
-    ];
-    config = {
-      replaceStdenv =
-        { pkgs }:
-        pkgs.withCFlags [ "-O3" "-flto=auto" "-funroll-loops" "-fno-plt" ] (
-          pkgs.useMoldLinker pkgs.ccacheStdenv
-        );
-    };
-    hostPlatform = {
-      system = "x86_64-linux";
-      gcc = {
-        arch = "znver1";
-        tune = "znver1";
-      };
-    };
-  };
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.efi.canTouchEfiVariables = true;
 
-  fileSystems."/" = {
-    device = rootDisk;
-    options = [
-      "noatime"
-      "nodiratime"
-      "discard=async" # Trim NVMe asynchronously
-      "commit=60" # Write to disk every 60s
-    ];
-    fsType = "ext4";
-  };
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelParams = [
+    "mitigations=auto"
+    "preempt=full"
+    "threadirqs"
+    "nohz=on"
+    "ipv6.disable=0"
+  ];
 
-  hardware = {
-    # VPS uses EPYC
-    cpu.amd.updateMicrocode = true;
-    enableRedistributableFirmware = false;
-  };
+  boot.kernel.sysctl = {
+    "kernel.pid_max" = 4194304;
+    "kernel.threads-max" = 2097152;
 
-  boot = {
-    kernelPackages = pkgs.linuxPackages_xanmod_latest;
-    initrd = {
-      availableKernelModules = [
-        # Virtio (most common on KVM VPS)
-        "virtio"
-        "virtio_ring"
-        "virtio_pci"
-        "virtio_blk"
-        "virtio_scsi"
-      ];
-      kernelModules = [
-        "ext4"
-        "virtio_balloon"
-        "virtio_console"
-        "virtio_rng"
-      ];
-      # verbose = false;
-      compressor = "zstd";
-    };
-    loader = {
-      grub = {
-        splashImage = null;
-        forceInstall = true;
-        device = "/dev/sda";
-      };
-      timeout = 1;
-    };
-    kernelParams = [
-      # CPU & SCHEDULING
-      "preempt=full" # Maximize responsiveness
-      "elevator=none" # Let the NVMe controller handle scheduling, OS scheduler adds latency
+    "fs.file-max" = 2097152;
+    "fs.inotify.max_user_watches" = 1048576;
+    "fs.inotify.max_user_instances" = 8192;
 
-      # MEMORY
-      "transparent_hugepage=madvise" # 'always' causes latency spikes during compaction. 'madvise' is smoother.
+    "vm.swappiness" = 1;
+    "vm.max_map_count" = 1048576;
+    "vm.dirty_background_ratio" = 3;
+    "vm.dirty_ratio" = 12;
 
-      # WATCHDOGS (Kill them to save cycles)
-      "nowatchdog"
-      "nmi_watchdog=0"
-
-      # CONSOLE
-      "console=ttyS0" # Contabo uses serial console for VNC/Emergency
-      "panic=5"
-
-      # FROM
-      "boot.panic_on_fail"
-      "vga=0x317"
-      "nomodeset"
-    ];
-    kernelModules = [ "tcp_bbr" ];
-    kernel.sysctl = {
-      # BBR Congestion Control
-      "net.core.default_qdisc" = "fq";
-      "net.ipv4.tcp_congestion_control" = "bbr";
-
-      # TCP Fast Open (Lowers RTT for re-visits)
-      "net.ipv4.tcp_fastopen" = 3;
-
-      # Connection Handling
-      "net.ipv4.tcp_max_syn_backlog" = 4096;
-      "net.ipv4.tcp_max_tw_buckets" = 200000;
-      "net.ipv4.tcp_tw_reuse" = 1; # Allow reusing sockets in TIME_WAIT
-      "net.ipv4.tcp_fin_timeout" = 10;
-      "net.ipv4.tcp_slow_start_after_idle" = 0; # Keep connections fast even after idle
-      "net.ipv4.tcp_mtu_probing" = 1; # Help with blackhole routers
-
-      # Security/Stability
-      "vm.swappiness" = 10; # Prefer RAM over swap
-      "vm.vfs_cache_pressure" = 50; # Cache filesystem metadata aggressively
-      "kernel.hung_task_timeout_secs" = 30;
-    };
+    "net.core.somaxconn" = 65535;
+    "net.core.netdev_max_backlog" = 32768;
+    "net.core.rmem_max" = 67108864;
+    "net.core.wmem_max" = 67108864;
+    "net.ipv4.tcp_max_syn_backlog" = 16384;
+    "net.ipv4.tcp_fastopen" = 3;
+    "net.ipv4.tcp_fin_timeout" = 15;
+    "net.ipv4.tcp_keepalive_time" = 300;
+    "net.ipv4.tcp_keepalive_intvl" = 30;
+    "net.ipv4.tcp_keepalive_probes" = 5;
+    "net.ipv4.tcp_mtu_probing" = 1;
+    "net.ipv4.tcp_rmem" = "4096 131072 67108864";
+    "net.ipv4.tcp_wmem" = "4096 131072 67108864";
+    "net.ipv4.ip_local_port_range" = "1024 65535";
+    "net.ipv4.tcp_slow_start_after_idle" = 0;
+    "net.ipv4.tcp_tw_reuse" = 1;
   };
 
   networking = {
-    inherit hostName;
-    nameservers = [
-      "1.1.1.1"
-      "1.0.0.1"
-    ];
-
+    hostName = "basalt-vps";
+    nftables.enable = true;
     firewall = {
       enable = true;
-      allowedTCPPorts = [
-        22
-        80
-        443
-      ];
-      allowPing = true;
+      allowedTCPPorts = [ 22 80 443 ];
+      allowPing = false;
       logRefusedConnections = false;
     };
-    useDHCP = true;
   };
+
+  time.timeZone = "UTC";
+
+  i18n.defaultLocale = "en_US.UTF-8";
+
+  services.openssh = {
+    enable = true;
+    settings = {
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      PermitRootLogin = "no";
+      X11Forwarding = false;
+      MaxAuthTries = 3;
+      AllowTcpForwarding = "no";
+      ClientAliveInterval = 300;
+      ClientAliveCountMax = 2;
+    };
+    openFirewall = false;
+  };
+
+  services.fail2ban.enable = true;
+
+  services.journald.extraConfig = ''
+    SystemMaxUse=1G
+    RuntimeMaxUse=256M
+    MaxRetentionSec=14day
+  '';
 
   zramSwap = {
     enable = true;
-    algorithm = "zstd";
-    memoryPercent = 50;
-    priority = 100;
+    memoryPercent = 25;
   };
 
-  services = {
-    fstrim = {
-      enable = true;
-      interval = "weekly";
-    };
-    logrotate = {
-      enable = true;
-      settings.header = {
-        dateext = true;
-        compress = true;
-      };
-    };
-    journald.extraConfig = "SystemMaxUse=100M"; # Prevent logs eating 75GB disk
-
-    irqbalance = {
-      enable = true;
-    };
-    openssh = {
-      enable = true;
-      package = pkgs.openssh_hpn;
-      settings = {
-        PasswordAuthentication = false;
-        PermitRootLogin = "prohibit-password";
-        KbdInteractiveAuthentication = false;
-      };
-    };
-    qemuGuest = {
-      enable = true;
-    };
-    udisks2.enable = false;
-  };
-
-  users.users.root.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIF4x4a59eOntSGiZqdnZtUr1PJvW/r8ehc/ZK21FCmsc" # Macbook
-  ];
-
-  systemd = {
-    tmpfiles.rules = [
-      "d ${config.programs.ccache.cacheDir} 0770 root nixbld -"
+  users.users.deploy = {
+    isNormalUser = true;
+    extraGroups = [ "wheel" ];
+    openssh.authorizedKeys.keys = [
+      # Replace with your real key before deploy.
+      "ssh-ed25519 REPLACE_ME"
     ];
-
-    services = {
-      "serial-getty@ttyS0".enable = false;
-      "serial-getty@hvc0".enable = false;
-      "getty@tty1".enable = false;
-      "autovt@".enable = false;
-      "NetworkManager-wait-online".enable = false;
-      "systemd-networkd-wait-online".enable = false;
-      "auditd".enable = false;
-
-    };
-    network.wait-online.enable = false;
-
-    enableEmergencyMode = false;
   };
 
   security = {
     sudo.wheelNeedsPassword = false;
-    pam.loginLimits = [
-      # High file limit for Nginx/Git
-      {
-        domain = "*";
-        item = "nofile";
-        type = "-";
-        value = "65536";
-      }
-      {
-        domain = "*";
-        item = "memlock";
-        type = "-";
-        value = "unlimited";
-      }
-    ];
+    rtkit.enable = true;
+  };
+
+  security.pam.loginLimits = [
+    { domain = "*"; type = "soft"; item = "nofile"; value = "1048576"; }
+    { domain = "*"; type = "hard"; item = "nofile"; value = "1048576"; }
+    { domain = "*"; type = "soft"; item = "nproc"; value = "524288"; }
+    { domain = "*"; type = "hard"; item = "nproc"; value = "524288"; }
+  ];
+
+  nix = {
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      auto-optimise-store = true;
+      max-jobs = "auto";
+      cores = 0;
+      accept-flake-config = true;
+      trusted-users = [ "root" "deploy" ];
+    };
+
+    gc = {
+      automatic = true;
+      dates = "daily";
+      options = "--delete-older-than 7d";
+    };
+
+    optimise.automatic = true;
   };
 
   environment = {
-    defaultPackages = [ ];
-    stub-ld.enable = false;
-  };
+    systemPackages = with pkgs; [
+      git
+      curl
+      wget
+      htop
+      jq
+      ripgrep
+      tmux
+    ];
 
-  programs = {
-    ccache.enable = true;
-    mosh = {
-      enable = true;
-      withUtempter = true;
-      openFirewall = true;
-    };
-    command-not-found.enable = false;
-    fish.generateCompletions = false;
-  };
-
-  xdg = {
-    autostart.enable = false;
-    icons.enable = false;
-    mime.enable = false;
-    sounds.enable = false;
-  };
-
-  documentation = {
-    enable = false;
-    nixos.enable = false;
-    man.enable = false;
-    info.enable = false;
-    doc.enable = false;
-  };
-
-  time.timeZone = "UTC";
-  i18n.defaultLocale = "en_US.UTF-8";
-
-  nix = {
-    enable = true;
-    settings = {
-      max-jobs = "auto";
-      cores = 0;
-
-      auto-optimise-store = true;
-      keep-outputs = true;
-      keep-derivations = true;
-
-      allowed-users = [ "@wheel" ];
-
-      substituters = [
-        "https://cache.nixos.org"
-        "https://nix-community.cachix.org"
-      ];
-      trusted-public-keys = [
-        "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
-        "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
-      ];
-
-      extra-sandbox-paths = [
-        config.programs.ccache.cacheDir
-      ];
-      system-features = [
-        "big-parallel"
-        "kvm"
-        "gccarch-znver1"
-      ];
-      experimental-features = [
-        "ca-derivations"
-        "nix-command"
-        "flakes"
-      ];
-    };
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 7d";
-
+    variables = {
+      EDITOR = "nvim";
     };
   };
 
-  system.stateVersion = "26.05";
+  # Placeholder basalt unit for later wiring to your monolith checkout.
+  systemd.services.basalt = {
+    description = "Basalt monolith";
+    wantedBy = [ "multi-user.target" ];
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
+    serviceConfig = {
+      User = "deploy";
+      Group = "users";
+      WorkingDirectory = "/home/deploy/dev/basalt";
+      Restart = "always";
+      RestartSec = 1;
+      NoNewPrivileges = true;
+      PrivateTmp = true;
+      ProtectSystem = "strict";
+      ProtectHome = "read-only";
+      ReadWritePaths = [ "/home/deploy/dev/basalt" "/var/lib/basalt" ];
+      LimitNOFILE = 1048576;
+      LimitNPROC = 524288;
+      AmbientCapabilities = "CAP_NET_BIND_SERVICE";
+      ExecStart = "${pkgs.bash}/bin/bash -lc 'echo wire basalt start command here; sleep infinity'";
+    };
+  };
+
+  systemd.tmpfiles.rules = [
+    "d /var/lib/basalt 0750 deploy users - -"
+    "d /home/deploy/dev 0755 deploy users - -"
+  ];
 }
