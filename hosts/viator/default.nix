@@ -16,6 +16,10 @@
   nixpkgs = {
     hostPlatform = "aarch64-darwin";
     config.allowUnfree = true;
+    # Overlays reuse this nixpkgs instead of evaluating each flake's own.
+    overlays = [
+      inputs.fenix.overlays.default
+    ];
   };
 
   networking.hostName = "viator";

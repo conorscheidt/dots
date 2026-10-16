@@ -3,6 +3,7 @@
     ./shell.nix
     ./git.nix
     ./terminal.nix
+    ./dev.nix
   ];
 
   home = {
