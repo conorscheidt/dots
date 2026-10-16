@@ -5,6 +5,7 @@
     ./terminal.nix
     ./dev.nix
     ./apps.nix
+    ./ai.nix
   ];
 
   home = {

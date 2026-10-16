@@ -13,6 +13,34 @@ final: prev: {
           }
         )
       );
+  # nixpkgs trails Anthropic's release channel by days, and new models need the
+  # newer CLI (T3 Code runs it). The entry is darwin-arm64 from
+  # downloads.claude.ai/claude-code-releases/<version>/manifest.zst.json.
+  claude-code =
+    (final.lib.warnIf (final.lib.versionAtLeast prev.claude-code.version "2.1.325")
+      "claude-code: nixpkgs has ${prev.claude-code.version}; drop the manifest override in pkgs/default.nix"
+      (
+        prev.claude-code.override {
+          manifest = {
+            version = "2.1.325";
+            platforms.darwin-arm64 = {
+              binary = "claude.zst";
+              checksum = "5117df01bb8150ced024d8944a9706034e0c9bf6e28ee527b8d7735397aca6db";
+            };
+          };
+        }
+      )
+    ).overrideAttrs
+      (old: {
+        # nixpkgs trusts only the keychain, which lacks the system roots, and
+        # falls back on NIX_SSL_CERT_FILE; an app launched by launchd (T3 Code)
+        # has no such variable and fails every TLS handshake. Unlike the
+        # manifest, this stays when nixpkgs catches up.
+        postFixup = (old.postFixup or "") + ''
+          substituteInPlace $out/bin/claude \
+            --replace-fail "CLAUDE_CODE_CERT_STORE-'system'" "CLAUDE_CODE_CERT_STORE-'bundled,system'"
+        '';
+      });
   # Spicetify supports macOS Spotify 1.3.9 from 2.46.7.
   spicetify-cli =
     final.lib.warnIf (final.lib.versionAtLeast prev.spicetify-cli.version "2.46.7")
