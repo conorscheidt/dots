@@ -16,15 +16,18 @@
       # NixOS/nixpkgs#574439 (fix pending in #568046): meson's
       # auto_features=enabled turns the X11/Wayland test suites into hard
       # requirements on darwin, where their xvfb-run/weston inputs are absent.
+      # Added only until nixpkgs passes these flags itself.
       mesonFlags =
         old.mesonFlags
-        ++ [
+        ++ lib.optionals (!lib.any (lib.hasPrefix "-Dtests-x11") old.mesonFlags) [
           (lib.mesonEnable "tests-x11" finalAttrs.doCheck)
           (lib.mesonEnable "tests-wayland" finalAttrs.doCheck)
         ];
       # One document per process: a second Finder open spawns a new instance
       # instead of failing silently in the running one.
       patches = (old.patches or []) ++ [./darwin-open-in-new-instance.patch];
+      # The app bundle below wraps the real binary itself.
+      dontWrapGApps = true;
     });
   });
   core = scope.zathura_core;
@@ -65,7 +68,7 @@ in
     installPhase = ''
       runHook preInstall
       contents=$out/Applications/Zathura.app/Contents
-      install -Dm755 ${core.bin}/bin/.zathura-wrapped $contents/MacOS/zathura-bin
+      install -Dm755 ${core.bin}/bin/zathura $contents/MacOS/zathura-bin
       install -Dm644 ${infoPlist} $contents/Info.plist
       install -Dm644 ${./AppIcon.icns} $contents/Resources/AppIcon.icns
       printf 'APPL????' > $contents/PkgInfo

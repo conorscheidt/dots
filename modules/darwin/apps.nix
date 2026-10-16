@@ -2,7 +2,7 @@
 # Brave (same-day Chromium security updates via its own updater), the
 # Claude and ChatGPT/Codex desktop apps, NordVPN (system extension) and Teams
 # (root .pkg installer). No formulae. Everything else comes from Nix;
-# Amphetamine stays with the App Store and Muse self-updates.
+# Amphetamine stays with the App Store; Muse and Raycast Beta update themselves.
 {
   nix-homebrew = {
     enable = true;

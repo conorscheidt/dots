@@ -26,7 +26,6 @@ in {
   imports = [inputs.spicetify-nix.homeManagerModules.spicetify];
 
   home.packages = with pkgs; [
-    raycast
     slack
     betterdisplay
     qbittorrent
@@ -70,6 +69,24 @@ in {
       shuffle
       keyboardShortcut
       fullAppDisplay
+    ];
+  };
+
+  # Brave itself is a Homebrew cask (self-updating); this only declares the
+  # extensions so a fresh profile installs them. Their settings stay in the profile.
+  programs.brave = {
+    enable = true;
+    package = null;
+    extensions = map (id: {inherit id;}) [
+      "pejdijmoenmkgeppbflobdenhhabjlaj" # iCloud Passwords
+      "eimadpbcbfnmbkopoojfekhnkhdbieeh" # Dark Reader
+      "mnjggcdmjocbbbhaepdhchncahnbgone" # SponsorBlock
+      "gebbhagfogifgggkldgodflihgfeippi" # Return YouTube Dislike
+      "ogkoifddpkoabehfemkolflcjhklmkge" # Tweaks for YouTube
+      "ihienfbdfdamhmhhiokjnjmpjgbenedg" # Canvas Refined
+      "aefkmifgmaafnojlojpnekbpbmjiiogg" # Popup Blocker (strict)
+      "hhfnghjdeddcfegfekjeihfmbjenlomm" # Web Activity Time Tracker
+      "eikknpnckalfaafkjkkjbikfbkbkdnfc" # Zelix
     ];
   };
 
