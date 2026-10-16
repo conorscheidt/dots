@@ -4,6 +4,7 @@
     ./git.nix
     ./terminal.nix
     ./dev.nix
+    ./apps.nix
   ];
 
   home = {

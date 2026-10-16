@@ -18,7 +18,9 @@
     config.allowUnfree = true;
     # Overlays reuse this nixpkgs instead of evaluating each flake's own.
     overlays = [
+      inputs.spotx-nix.overlays.default
       inputs.fenix.overlays.default
+      (import ../../pkgs)
     ];
   };
 
