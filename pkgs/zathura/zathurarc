@@ -1,0 +1,88 @@
+# Gruvbox Material Dark (medium background, material foreground).
+# Options checked against Zathura 2026.07.18 (GTK4).
+
+# Reading layout. Saved per-document state takes precedence on reopening.
+set pages-per-row                2
+set first-page-column            "1:1"
+set advance-pages-per-row        true
+set adjust-open                  "width"
+set page-h-padding               12
+set page-v-padding               12
+
+# Trackpad: scroll-step and scroll-hstep multiply two-finger movement deltas.
+# Keep both axes equal; 0.5 gives slower, finer panning when zoomed in.
+# Raise both together for faster trackpad scrolling. These also affect hjkl.
+# There is no "smooth-scroll" setting in this version.
+set scroll-step                  0.5
+set scroll-hstep                 0.5
+set scroll-full-overlap          0.10
+set scroll-page-aware            false
+set scroll-wrap                  false
+set zoom-step                    5
+set zoom-center                  true
+
+# Clean interface: bars and scrollbars hidden until needed.
+# : and / still open the input bar; Ctrl+N toggles the status bar.
+set guioptions                   ""
+set font                         "Menlo 11"
+set statusbar-basename           true
+set window-title-basename        true
+set window-title-page            true
+set selection-clipboard          "clipboard"
+set selection-notification       false
+set search-hadjust               false
+set link-zoom                    false
+
+# Keep bookmarks, reading position, zoom, and layout for each document.
+set database                     "sqlite"
+set open-first-page              false
+
+# Dark document pages; Ctrl+R toggles original colors.
+# Keep hue for colored content and preserve recognized image regions.
+# Scans and vector diagrams may still need Ctrl+R for faithful colors.
+set recolor                      true
+set recolor-keephue               true
+# set recolor-reverse-video         true
+set recolor-lightcolor            "#292828"
+set recolor-darkcolor             "#d4be98"
+
+# Main surfaces and loading placeholders.
+set default-bg                   "#292828"
+set default-fg                   "#d4be98"
+set render-loading               true
+set render-loading-bg            "#292828"
+set render-loading-fg            "#d4be98"
+
+# Command input and optional status bar.
+set inputbar-bg                  "#32302f"
+set inputbar-fg                  "#d4be98"
+set statusbar-bg                 "#32302f"
+set statusbar-fg                 "#d4be98"
+
+# Completions and document outline.
+set completion-bg                "#32302f"
+set completion-fg                "#d4be98"
+set completion-group-bg          "#292828"
+set completion-group-fg          "#a89984"
+set completion-highlight-bg      "#7daea3"
+set completion-highlight-fg      "#292828"
+set index-bg                     "#292828"
+set index-fg                     "#d4be98"
+set index-active-bg              "#7daea3"
+set index-active-fg              "#292828"
+
+# Gruvbox Material notification and highlight colors.
+set notification-bg              "#32302f"
+set notification-fg              "#a9b665"
+set notification-error-bg        "#32302f"
+set notification-error-fg        "#ea6962"
+set notification-warning-bg      "#32302f"
+set notification-warning-fg      "#d8a657"
+set highlight-color              "rgba(216,166,87,0.30)"
+set highlight-active-color       "rgba(231,138,78,0.45)"
+
+# Preserve all default keybindings, including:
+# d: single/two pages; D: change page pairing; s: fit width; a: best fit.
+# Ctrl+R: recolor; Ctrl+N: status bar; J/K: next/previous spread.
+# Tab: outline; f: follow links; /: search; R: reload the document.
+# After installing, restart Zathura or run :source in the existing instance.
