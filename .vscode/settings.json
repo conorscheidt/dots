@@ -1,0 +1,28 @@
+{
+  "nix.enableLanguageServer": true,
+  "nix.serverPath": "nixd",
+  "nix.formatterPath": "nixfmt",
+  "nix.serverSettings": {
+    "nixd": {
+      "formatting": {
+        "command": [
+          "nixfmt"
+        ]
+      },
+      "nixpkgs": {
+        "expr": "(builtins.getFlake \"${workspaceFolder}\").darwinConfigurations.viator.pkgs"
+      },
+      "options": {
+        "darwin": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").darwinConfigurations.viator.options"
+        },
+        "home-manager": {
+          "expr": "(builtins.getFlake \"${workspaceFolder}\").darwinConfigurations.viator.options.home-manager.users.type.getSubOptions []"
+        },
+        "nixvim": {
+          "expr": "let flake = builtins.getFlake \"${workspaceFolder}\"; in (flake.inputs.nixvim.lib.evalNixvim { system = builtins.currentSystem; }).options"
+        }
+      }
+    }
+  }
+}
