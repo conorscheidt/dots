@@ -1,5 +1,6 @@
 {
   inputs,
+  pkgs,
   ...
 }:
 {
@@ -7,6 +8,7 @@
     inputs.determinate.darwinModules.default
     inputs.home-manager.darwinModules.home-manager
     ../../modules/darwin/nix.nix
+    ../../modules/darwin/system.nix
   ];
 
   nixpkgs = {
@@ -24,6 +26,7 @@
 
   users.users.conor = {
     home = "/Users/conor";
+    shell = pkgs.fish;
   };
 
   home-manager = {
