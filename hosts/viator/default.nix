@@ -6,9 +6,11 @@
 {
   imports = [
     inputs.determinate.darwinModules.default
+    inputs.nix-homebrew.darwinModules.nix-homebrew
     inputs.home-manager.darwinModules.home-manager
     ../../modules/darwin/nix.nix
     ../../modules/darwin/system.nix
+    ../../modules/darwin/apps.nix
   ];
 
   nixpkgs = {
