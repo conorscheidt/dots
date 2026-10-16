@@ -129,7 +129,6 @@ in {
         gl = "git pull";
         gd = "git diff";
         gds = "git diff --staged";
-        lg = "lazygit";
         t = "tmux";
         m = "mosh";
         rmf = "command rm -rf";
