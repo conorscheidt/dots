@@ -1,6 +1,7 @@
 { pkgs, ... }: {
   imports = [
     ./shell.nix
+    ./git.nix
   ];
 
   home = {
