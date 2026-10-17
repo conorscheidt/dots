@@ -7,6 +7,7 @@
     ./apps.nix
     ./brave.nix
     ./ai.nix
+    ./nvim
   ];
 
   home = {

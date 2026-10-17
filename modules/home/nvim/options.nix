@@ -1,0 +1,434 @@
+# Options, core keymaps and autocommands.
+{ config, ... }:
+let
+  map = mode: key: action: desc: {
+    inherit mode key action;
+    options = { inherit desc; };
+  };
+  inherit (config.lib.nixvim) mkRaw;
+  # Jump to the next/previous diagnostic, optionally of one severity.
+  jump =
+    count: severity:
+    mkRaw "function() vim.diagnostic.jump({ count = ${toString count} * vim.v.count1, severity = ${
+      if severity == null then "nil" else "vim.diagnostic.severity.${severity}"
+    }, on_jump = function(_, bufnr) vim.diagnostic.open_float({ bufnr = bufnr, scope = 'cursor', focus = false }) end }) end";
+in
+{
+  programs.nixvim = {
+    globals = {
+      mapleader = " ";
+      maplocalleader = ",";
+      loaded_netrw = 1;
+      loaded_netrwPlugin = 1;
+      loaded_gzip = 1;
+      loaded_tarPlugin = 1;
+      loaded_zipPlugin = 1;
+      loaded_tutor_mode_plugin = 1;
+      loaded_remote_plugins = 1;
+    };
+
+    # Shift held a moment too long: :W, :Wq, :WQ and :Q mean their lowercase.
+    extraConfigLua = ''
+      for typo, cmd in pairs({ W = "w", Wq = "wq", WQ = "wq", Q = "q", Qa = "qa", QA = "qa" }) do
+        vim.cmd(("cnoreabbrev <expr> %s getcmdtype() == ':' && getcmdline() ==# '%s' ? '%s' : '%s'"):format(typo, typo, cmd, typo))
+      end
+    '';
+
+    opts = {
+      autowrite = true;
+      clipboard = "unnamedplus";
+      cmdheight = 0; # Removes the empty 1-line gap under Lualine NORMAL badge
+      completeopt = "menu,menuone,noselect";
+      conceallevel = 2;
+      confirm = true;
+      cursorline = true;
+      expandtab = true;
+      # Repos may carry a .nvim.lua; Neovim asks before trusting each one.
+      exrc = true;
+      fillchars = {
+        foldopen = "";
+        foldclose = "";
+        fold = " ";
+        foldsep = " ";
+        diff = " ";
+        eob = " ";
+      };
+      foldlevel = 99;
+      foldmethod = "indent";
+      foldtext = "";
+      formatexpr = "v:lua.require'core'.formatexpr()";
+      formatoptions = "jcroqlnt";
+      grepformat = "%f:%l:%c:%m";
+      grepprg = "rg --vimgrep";
+      ignorecase = true;
+      inccommand = "nosplit";
+      jumpoptions = "view";
+      laststatus = 3;
+      linebreak = true;
+      list = true;
+      mouse = "a";
+      number = true;
+      pumblend = 10;
+      pumheight = 10;
+      relativenumber = true;
+      ruler = false;
+      scrolloff = 8;
+      sessionoptions = [
+        "buffers"
+        "curdir"
+        "tabpages"
+        "winsize"
+        "help"
+        "globals"
+        "skiprtp"
+        "folds"
+      ];
+      shiftround = true;
+      shiftwidth = 2;
+      shortmess = "ltToOCFWIc";
+      showtabline = 1; # only real tab pages, and only when there is more than one
+      showmode = false;
+      sidescrolloff = 8;
+      signcolumn = "yes";
+      smartcase = true;
+      smartindent = true;
+      smoothscroll = true;
+      spelllang = [ "en" ];
+      splitbelow = true;
+      splitkeep = "screen";
+      splitright = true;
+      tabstop = 2;
+      termguicolors = true;
+      timeoutlen = 300;
+      undofile = true;
+      undolevels = 10000;
+      updatetime = 200;
+      virtualedit = "block";
+      wildmode = "longest:full,full";
+      winborder = "rounded";
+      winminwidth = 5;
+      wrap = false;
+    };
+
+    # Copies go out as OSC 52, which tmux and Ghostty pass to the macOS
+    # pasteboard, instead of spawning pbcopy on every yank and delete.
+    globals.clipboard = {
+      name = "OSC 52 + pbpaste";
+      copy = {
+        "+" = mkRaw ''function(lines) require("vim.ui.clipboard.osc52").copy("+")(lines) end'';
+        "*" = mkRaw ''function(lines) require("vim.ui.clipboard.osc52").copy("*")(lines) end'';
+      };
+      paste = {
+        "+" = [ "pbpaste" ];
+        "*" = [ "pbpaste" ];
+      };
+    };
+
+    filetype.filename.".clangd" = "yaml";
+
+    # Python continuation lines as ruff/black format them: one level for an
+    # open bracket, and the closing bracket back at the statement's indent.
+    globals.python_indent = {
+      open_paren = "shiftwidth()";
+      nested_paren = "shiftwidth()";
+      continue = "shiftwidth()";
+      closed_paren_align_last_line = false;
+    };
+    # Vim's HTML indent leaves `<p>` flat because `</p>` is optional.
+    globals.html_indent_inctags = "p";
+
+    diagnostic.settings = {
+      underline = true;
+      update_in_insert = false;
+      severity_sort = true;
+      virtual_text = {
+        spacing = 4;
+        source = "if_many";
+        prefix = "●";
+      };
+      float.source = "if_many";
+      signs.text = mkRaw ''
+        {
+          [vim.diagnostic.severity.ERROR] = " ",
+          [vim.diagnostic.severity.WARN] = " ",
+          [vim.diagnostic.severity.HINT] = " ",
+          [vim.diagnostic.severity.INFO] = " ",
+        }
+      '';
+    };
+
+    autoGroups.core.clear = true;
+    autoCmd = [
+      {
+        event = [
+          "FocusGained"
+          "TermClose"
+          "TermLeave"
+        ];
+        group = "core";
+        desc = "Reload files changed outside Neovim";
+        callback = mkRaw ''function() if vim.o.buftype ~= "nofile" then vim.cmd("checktime") end end'';
+      }
+      {
+        event = "TextYankPost";
+        group = "core";
+        callback = mkRaw "function() (vim.hl or vim.highlight).on_yank() end";
+      }
+      {
+        event = "VimResized";
+        group = "core";
+        desc = "Equalise splits on resize";
+        callback = mkRaw ''function() local tab = vim.fn.tabpagenr(); vim.cmd("tabdo wincmd ="); vim.cmd("tabnext " .. tab) end'';
+      }
+      {
+        event = "BufReadPost";
+        group = "core";
+        desc = "Return to the last edit position";
+        callback = mkRaw ''
+          function(ev)
+            -- Filetype detection runs after this group, so match it here.
+            local exclude = { gitcommit = true, gitrebase = true }
+            if exclude[vim.filetype.match({ buf = ev.buf }) or ""] or vim.b[ev.buf].core_last_loc then return end
+            vim.b[ev.buf].core_last_loc = true
+            local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+            if mark[1] > 0 and mark[1] <= vim.api.nvim_buf_line_count(ev.buf) then
+              pcall(vim.api.nvim_win_set_cursor, 0, mark)
+            end
+          end
+        '';
+      }
+      {
+        event = "FileType";
+        group = "core";
+        pattern = [
+          "grug-far"
+          "help"
+          "notify"
+          "qf"
+          "startuptime"
+          "gitsigns-blame"
+          "dap-float"
+          "neotest-output"
+          "neotest-output-panel"
+          "neotest-summary"
+        ];
+        desc = "Close utility windows with q";
+        callback = mkRaw ''
+          function(ev)
+            vim.bo[ev.buf].buflisted = false
+            vim.keymap.set("n", "q", function() pcall(vim.cmd.close); pcall(vim.api.nvim_buf_delete, ev.buf, { force = true }) end,
+              { buffer = ev.buf, silent = true, desc = "Quit Buffer" })
+          end
+        '';
+      }
+      {
+        event = "FileType";
+        group = "core";
+        pattern = [
+          "text"
+          "plaintex"
+          "typst"
+          "gitcommit"
+          "markdown"
+        ];
+        callback = mkRaw "function() vim.opt_local.wrap = true; vim.opt_local.spell = true end";
+      }
+      {
+        event = "FileType";
+        group = "core";
+        pattern = [
+          "c"
+          "cpp"
+          "objc"
+          "objcpp"
+          "cuda"
+        ];
+        desc = "4-space indent for the C family";
+        callback = mkRaw "function() vim.bo.shiftwidth = 4; vim.bo.tabstop = 4; vim.bo.softtabstop = 4 end";
+      }
+      {
+        event = "FileType";
+        group = "core";
+        pattern = [
+          "json"
+          "jsonc"
+          "json5"
+        ];
+        callback = mkRaw "function() vim.opt_local.conceallevel = 0 end";
+      }
+      {
+        event = "BufWritePre";
+        group = "core";
+        desc = "Create missing parent directories on save";
+        callback = mkRaw ''
+          function(ev)
+            if ev.match:match("^%w%w+:[\\/][\\/]") then return end
+            vim.fn.mkdir(vim.fn.fnamemodify(vim.uv.fs_realpath(ev.match) or ev.match, ":p:h"), "p")
+          end
+        '';
+      }
+    ];
+
+    keymaps = [
+      # Display-line motion without a count.
+      {
+        mode = [
+          "n"
+          "x"
+        ];
+        key = "j";
+        action = "v:count == 0 ? 'gj' : 'j'";
+        options = {
+          expr = true;
+          silent = true;
+        };
+      }
+      {
+        mode = [
+          "n"
+          "x"
+        ];
+        key = "k";
+        action = "v:count == 0 ? 'gk' : 'k'";
+        options = {
+          expr = true;
+          silent = true;
+        };
+      }
+      (map "n" "<C-Up>" "<cmd>resize +2<cr>" "Increase Window Height")
+      (map "n" "<C-Down>" "<cmd>resize -2<cr>" "Decrease Window Height")
+      (map "n" "<C-Left>" "<cmd>vertical resize -2<cr>" "Decrease Window Width")
+      (map "n" "<C-Right>" "<cmd>vertical resize +2<cr>" "Increase Window Width")
+      (map "n" "<leader>`" "<cmd>e #<cr>" "Switch to Other Buffer")
+      {
+        mode = [
+          "i"
+          "n"
+          "s"
+        ];
+        key = "<esc>";
+        action = mkRaw ''function() vim.cmd("noh"); if vim.snippet then vim.snippet.stop() end; return "<esc>" end'';
+        options = {
+          expr = true;
+          desc = "Escape and Clear hlsearch";
+        };
+      }
+      (map "n" "<leader>ur" "<Cmd>nohlsearch<Bar>diffupdate<Bar>normal! <C-L><CR>"
+        "Redraw / Clear hlsearch / Diff Update"
+      )
+      {
+        mode = "n";
+        key = "n";
+        action = "'Nn'[v:searchforward].'zv'";
+        options = {
+          expr = true;
+          desc = "Next Search Result";
+        };
+      }
+      {
+        mode = [
+          "x"
+          "o"
+        ];
+        key = "n";
+        action = "'Nn'[v:searchforward]";
+        options = {
+          expr = true;
+          desc = "Next Search Result";
+        };
+      }
+      {
+        mode = "n";
+        key = "N";
+        action = "'nN'[v:searchforward].'zv'";
+        options = {
+          expr = true;
+          desc = "Prev Search Result";
+        };
+      }
+      {
+        mode = [
+          "x"
+          "o"
+        ];
+        key = "N";
+        action = "'nN'[v:searchforward]";
+        options = {
+          expr = true;
+          desc = "Prev Search Result";
+        };
+      }
+      # Undo break-points.
+      (map "i" "," ",<c-g>u" null)
+      (map "i" "." ".<c-g>u" null)
+      (map "i" ";" ";<c-g>u" null)
+      (map [ "i" "x" "n" "s" ] "<C-s>" "<cmd>w<cr><esc>" "Save File")
+      (map "n" "<leader>K" "<cmd>norm! K<cr>" "Keywordprg")
+      (map "x" "<" "<gv" null)
+      (map "x" ">" ">gv" null)
+      (map "n" "gco" "o<esc>Vcx<esc><cmd>normal gcc<cr>fxa<bs>" "Add Comment Below")
+      (map "n" "gcO" "O<esc>Vcx<esc><cmd>normal gcc<cr>fxa<bs>" "Add Comment Above")
+      (map "n" "<leader>fn" "<cmd>enew<cr>" "New File")
+      (map "n" "<leader>xl" (mkRaw ''
+        function()
+          local ok, err = pcall(vim.fn.getloclist(0, { winid = 0 }).winid ~= 0 and vim.cmd.lclose or vim.cmd.lopen)
+          if not ok and err then vim.notify(err, vim.log.levels.ERROR) end
+        end
+      '') "Location List")
+      (map "n" "<leader>xq" (mkRaw ''
+        function()
+          local ok, err = pcall(vim.fn.getqflist({ winid = 0 }).winid ~= 0 and vim.cmd.cclose or vim.cmd.copen)
+          if not ok and err then vim.notify(err, vim.log.levels.ERROR) end
+        end
+      '') "Quickfix List")
+      (map "n" "<leader>cd" (mkRaw "vim.diagnostic.open_float") "Line Diagnostics")
+      (map "n" "]d" (jump 1 null) "Next Diagnostic")
+      (map "n" "[d" (jump (-1) null) "Prev Diagnostic")
+      (map "n" "]e" (jump 1 "ERROR") "Next Error")
+      (map "n" "[e" (jump (-1) "ERROR") "Prev Error")
+      (map "n" "]w" (jump 1 "WARN") "Next Warning")
+      (map "n" "[w" (jump (-1) "WARN") "Prev Warning")
+      (map "n" "<leader>qq" "<cmd>qa<cr>" "Quit All")
+      (map "n" "<leader>ui" (mkRaw "vim.show_pos") "Inspect Pos")
+      (map "n" "<leader>uI"
+        (mkRaw ''function() vim.treesitter.inspect_tree(); vim.api.nvim_input("I") end'')
+        "Inspect Tree"
+      )
+      # Windows and tabs.
+      {
+        mode = "n";
+        key = "<leader>-";
+        action = "<C-W>s";
+        options = {
+          remap = true;
+          desc = "Split Window Below";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>|";
+        action = "<C-W>v";
+        options = {
+          remap = true;
+          desc = "Split Window Right";
+        };
+      }
+      {
+        mode = "n";
+        key = "<leader>wd";
+        action = "<C-W>c";
+        options = {
+          remap = true;
+          desc = "Delete Window";
+        };
+      }
+      (map "n" "<leader><tab>l" "<cmd>tablast<cr>" "Last Tab")
+      (map "n" "<leader><tab>o" "<cmd>tabonly<cr>" "Close Other Tabs")
+      (map "n" "<leader><tab>f" "<cmd>tabfirst<cr>" "First Tab")
+      (map "n" "<leader><tab><tab>" "<cmd>tabnew<cr>" "New Tab")
+      (map "n" "<leader><tab>]" "<cmd>tabnext<cr>" "Next Tab")
+      (map "n" "<leader><tab>d" "<cmd>tabclose<cr>" "Close Tab")
+      (map "n" "<leader><tab>[" "<cmd>tabprevious<cr>" "Prev Tab")
+    ];
+  };
+}

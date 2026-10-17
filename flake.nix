@@ -14,6 +14,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    nixvim = {
+      url = "github:nix-community/nixvim";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     determinate = {
       url = "https://flakehub.com/f/DeterminateSystems/determinate/3";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -47,12 +52,19 @@
         specialArgs = { inherit inputs; };
         modules = [ ./hosts/viator ];
       };
+
+      nvim = viator.config.home-manager.users.${viator.config.system.primaryUser}.programs.nixvim.build;
     in
     {
       darwinConfigurations.viator = viator;
 
       packages.${system} = {
         default = viator.system;
+        nvim = nvim.package;
+      };
+
+      checks.${system} = {
+        nvim = nvim.test;
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
