@@ -13,6 +13,7 @@
     ./format.nix
     ./debug.nix
     ./ai.nix
+    ./cp.nix
   ];
 
   programs.nixvim = {
