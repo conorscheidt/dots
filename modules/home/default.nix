@@ -5,6 +5,7 @@
     ./terminal.nix
     ./dev.nix
     ./apps.nix
+    ./brave.nix
     ./ai.nix
   ];
 
