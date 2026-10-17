@@ -439,7 +439,13 @@ in {
           hover = true;
         };
       };
-      lazyLoad.settings.event = "BufRead Cargo.toml";
+      # BufReadPre, not BufRead or ft: setup() attaches to a current
+      # Cargo.toml, and lz.n replays BufRead (also for ft triggers) into
+      # crates' own BufRead autocmd, so it attaches twice, both updates fetch
+      # every crate and each "upgrade available" diagnostic shows twice.
+      # Loaded at BufReadPre, setup() sees the still-empty buffer and the real
+      # BufRead does the one update. (Eager loading would cost ~4 ms.)
+      lazyLoad.settings.event = "BufReadPre Cargo.toml";
     };
 
     plugins.clangd-extensions = {
