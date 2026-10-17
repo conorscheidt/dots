@@ -12,7 +12,7 @@
       if severity == null
       then "nil"
       else "vim.diagnostic.severity.${severity}"
-    }, float = true }) end";
+    }, on_jump = function(_, bufnr) vim.diagnostic.open_float({ bufnr = bufnr, scope = 'cursor', focus = false }) end }) end";
 in {
   programs.nixvim = {
     globals = {

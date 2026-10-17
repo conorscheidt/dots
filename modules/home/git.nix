@@ -120,6 +120,8 @@ in {
           User = "root";
         };
         "*" = {
+          # Apple's ssh knows UseKeychain; Nix-built OpenSSH (used by mosh) does not.
+          IgnoreUnknown = "UseKeychain";
           IdentityFile = "~/.ssh/id_ed25519";
           IdentitiesOnly = true;
           AddKeysToAgent = "yes";

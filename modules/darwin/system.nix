@@ -141,8 +141,10 @@
   system.activationScripts.postActivation.text = ''
     install -d -o conor -g staff /Users/conor/Pictures/Screenshots
     # Raycast and Spotlight find apps through the metadata index.
-    if ! /usr/bin/mdutil -s / | grep -q 'Indexing enabled'; then
-      /usr/bin/mdutil -i on / >/dev/null
-    fi
+    for vol in / /System/Volumes/Data; do
+      if ! /usr/bin/mdutil -s "$vol" | grep -q 'Indexing enabled'; then
+        /usr/bin/mdutil -i on "$vol" >/dev/null
+      fi
+    done
   '';
 }

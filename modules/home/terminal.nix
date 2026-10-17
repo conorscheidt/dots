@@ -20,8 +20,9 @@ in {
     settings = {
       # Login shell first so the tmux server inherits the full Nix environment.
       command = "${pkgs.fish}/bin/fish --login -c 'exec ${tmux} new-session -A -s main'";
-      shell-integration = "fish";
-      shell-integration-features = "no-cursor,sudo,title";
+      # Its injection is consumed by the non-interactive wrapper above, and
+      # tmux owns titles and prompts anyway.
+      shell-integration = "none";
 
       font-family = "FiraCode Nerd Font Mono";
       font-size = 13.5;

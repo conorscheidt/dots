@@ -1,5 +1,8 @@
-# Debugging (nvim-dap, dap-ui, virtual text) and testing (neotest), both
-# loaded on their keys. Adapters come from nixpkgs: codelldb (C/C++/Rust),
+# Debugging (nvim-dap, dap-ui, virtual text) and testing (neotest). nvim-dap
+# and neotest are dependencies of their adapters, so nixvim puts them on the
+# startup path anyway and their plugin/ commands exist from the start: dap is
+# configured eagerly (cheap), neotest right after the first frame (its adapters
+# cost ~12 ms), and only the dap UI waits for a session. Adapters come from nixpkgs: codelldb (C/C++/Rust),
 # js-debug (Node/browser) and debugpy (Python, run with the project's .venv).
 {
   config,
@@ -9,18 +12,18 @@
 }: let
   lua = config.lib.nixvim.mkRaw;
   key = lhs: rhs: desc: {
-    __unkeyed-1 = lhs;
-    __unkeyed-2 = lua rhs;
-    inherit desc;
+    mode = "n";
+    key = lhs;
+    action = lua rhs;
+    options.desc = desc;
   };
   modeKey = mode: lhs: rhs: desc: key lhs rhs desc // {inherit mode;};
+  withUi = body: "function() require('lz.n').trigger_load({ 'nvim-dap-ui', 'nvim-dap-virtual-text' }); ${body} end";
   dap = fn: "function() require('dap').${fn} end";
 
   codelldb = "${pkgs.vscode-extensions.vadimcn.vscode-lldb}/share/vscode/extensions/vadimcn.vscode-lldb/adapter/codelldb";
   jsDebug = lib.getExe' pkgs.vscode-js-debug "js-debug";
 
-  # neotest's dap strategy needs nvim-dap on the runtimepath.
-  withDap = body: "function() require('lz.n').trigger_load('nvim-dap'); ${body} end";
   neotest = body: "function() ${body} end";
 in {
   programs.nixvim = {
@@ -112,46 +115,57 @@ in {
         };
         dapLogPoint.text = ".>";
       };
-      # The UI and virtual text are dap's companions; load them with it and
-      # open/close the UI with each session.
+      # The UI and virtual text load with the first session and follow it.
       luaConfig.post = ''
         vim.api.nvim_set_hl(0, "DapStoppedLine", { default = true, link = "Visual" })
-        require("lz.n").trigger_load({ "nvim-dap-ui", "nvim-dap-virtual-text" })
-        local dap, dapui = require("dap"), require("dapui")
-        dap.listeners.after.event_initialized.dapui_config = function() dapui.open({}) end
-        dap.listeners.before.event_terminated.dapui_config = function() dapui.close({}) end
-        dap.listeners.before.event_exited.dapui_config = function() dapui.close({}) end
+        local dap = require("dap")
+        dap.listeners.after.event_initialized.dapui_config = function()
+          require("lz.n").trigger_load({ "nvim-dap-ui", "nvim-dap-virtual-text" })
+          require("dapui").open({})
+        end
+        dap.listeners.before.event_terminated.dapui_config = function() if package.loaded.dapui then require("dapui").close({}) end end
+        dap.listeners.before.event_exited.dapui_config = function() if package.loaded.dapui then require("dapui").close({}) end end
       '';
-      lazyLoad.settings.keys = [
-        (key "<leader>dB" "function() require('dap').set_breakpoint(vim.fn.input('Breakpoint condition: ')) end" "Breakpoint Condition")
-        (key "<leader>db" (dap "toggle_breakpoint()") "Toggle Breakpoint")
-        (key "<leader>dc" (dap "continue()") "Run/Continue")
-        (key "<leader>da" ''
-            function()
-              local args = vim.split(vim.fn.input("Run with args: "), " ", { trimempty = true })
-              require("dap").continue({ before = function(config) return vim.tbl_extend("force", config, { args = args }) end })
-            end
-          ''
-          "Run with Args")
-        (key "<leader>dC" (dap "run_to_cursor()") "Run to Cursor")
-        (key "<leader>dg" (dap "goto_()") "Go to Line (No Execute)")
-        (key "<leader>di" (dap "step_into()") "Step Into")
-        (key "<leader>dj" (dap "down()") "Down")
-        (key "<leader>dk" (dap "up()") "Up")
-        (key "<leader>dl" (dap "run_last()") "Run Last")
-        (key "<leader>do" (dap "step_out()") "Step Out")
-        (key "<leader>dO" (dap "step_over()") "Step Over")
-        (key "<leader>dP" (dap "pause()") "Pause")
-        (key "<leader>dr" (dap "repl.toggle()") "Toggle REPL")
-        (key "<leader>ds" (dap "session()") "Session")
-        (key "<leader>dt" (dap "terminate()") "Terminate")
-        (key "<leader>dw" "function() require('dap.ui.widgets').hover() end" "Widgets")
-        (key "<leader>du" "function() require('dapui').toggle({}) end" "Dap UI")
-        (modeKey ["n" "x"] "<leader>de" "function() require('dapui').eval() end" "Eval")
-        (key "<leader>dPt" "function() require('dap-python').test_method() end" "Debug Method (Python)")
-        (key "<leader>dPc" "function() require('dap-python').test_class() end" "Debug Class (Python)")
-      ];
     };
+
+    keymaps = [
+      (key "<leader>dB" "function() require('dap').set_breakpoint(vim.fn.input('Breakpoint condition: ')) end" "Breakpoint Condition")
+      (key "<leader>db" (dap "toggle_breakpoint()") "Toggle Breakpoint")
+      (key "<leader>dc" (dap "continue()") "Run/Continue")
+      (key "<leader>da" ''
+          function()
+            local args = vim.split(vim.fn.input("Run with args: "), " ", { trimempty = true })
+            require("dap").continue({ before = function(config) return vim.tbl_extend("force", config, { args = args }) end })
+          end
+        ''
+        "Run with Args")
+      (key "<leader>dC" (dap "run_to_cursor()") "Run to Cursor")
+      (key "<leader>dg" (dap "goto_()") "Go to Line (No Execute)")
+      (key "<leader>di" (dap "step_into()") "Step Into")
+      (key "<leader>dj" (dap "down()") "Down")
+      (key "<leader>dk" (dap "up()") "Up")
+      (key "<leader>dl" (dap "run_last()") "Run Last")
+      (key "<leader>do" (dap "step_out()") "Step Out")
+      (key "<leader>dO" (dap "step_over()") "Step Over")
+      (key "<leader>dP" (dap "pause()") "Pause")
+      (key "<leader>dr" (dap "repl.toggle()") "Toggle REPL")
+      (key "<leader>ds" (dap "session()") "Session")
+      (key "<leader>dt" (dap "terminate()") "Terminate")
+      (key "<leader>dw" "function() require('dap.ui.widgets').hover() end" "Widgets")
+      (key "<leader>du" (withUi "require('dapui').toggle({})") "Dap UI")
+      (modeKey ["n" "x"] "<leader>de" (withUi "require('dapui').eval()") "Eval")
+
+      (key "<leader>tt" (neotest ''require("neotest").run.run(vim.fn.expand("%"))'') "Run File")
+      (key "<leader>tT" (neotest ''require("neotest").run.run(vim.uv.cwd())'') "Run All Test Files")
+      (key "<leader>tr" (neotest ''require("neotest").run.run()'') "Run Nearest")
+      (key "<leader>tl" (neotest ''require("neotest").run.run_last()'') "Run Last")
+      (key "<leader>ts" (neotest ''require("neotest").summary.toggle()'') "Toggle Summary")
+      (key "<leader>to" (neotest ''require("neotest").output.open({ enter = true, auto_close = true })'') "Show Output")
+      (key "<leader>tO" (neotest ''require("neotest").output_panel.toggle()'') "Toggle Output Panel")
+      (key "<leader>tS" (neotest ''require("neotest").run.stop()'') "Stop")
+      (key "<leader>tw" (neotest ''require("neotest").watch.toggle(vim.fn.expand("%"))'') "Toggle Watch")
+      (key "<leader>td" (neotest ''require("neotest").run.run({ strategy = "dap" })'') "Debug Nearest")
+    ];
 
     plugins.dap-ui = {
       enable = true;
@@ -189,18 +203,7 @@ in {
         output.open_on_run = true;
         quickfix.open = lua ''function() vim.cmd("Trouble qflist open") end'';
       };
-      lazyLoad.settings.keys = [
-        (key "<leader>tt" (neotest ''require("neotest").run.run(vim.fn.expand("%"))'') "Run File")
-        (key "<leader>tT" (neotest ''require("neotest").run.run(vim.uv.cwd())'') "Run All Test Files")
-        (key "<leader>tr" (neotest ''require("neotest").run.run()'') "Run Nearest")
-        (key "<leader>tl" (neotest ''require("neotest").run.run_last()'') "Run Last")
-        (key "<leader>ts" (neotest ''require("neotest").summary.toggle()'') "Toggle Summary")
-        (key "<leader>to" (neotest ''require("neotest").output.open({ enter = true, auto_close = true })'') "Show Output")
-        (key "<leader>tO" (neotest ''require("neotest").output_panel.toggle()'') "Toggle Output Panel")
-        (key "<leader>tS" (neotest ''require("neotest").run.stop()'') "Stop")
-        (key "<leader>tw" (neotest ''require("neotest").watch.toggle(vim.fn.expand("%"))'') "Toggle Watch")
-        (key "<leader>td" (withDap ''require("neotest").run.run({ strategy = "dap" })'') "Debug Nearest")
-      ];
+      lazyLoad.settings.event = "DeferredUIEnter";
     };
   };
 }

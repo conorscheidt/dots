@@ -42,6 +42,10 @@ end
 ---Mark this Neovim as a CP session. The AI loader refuses to start once set.
 function M.session()
   vim.g.cp_session = true
+  -- A Claude session started earlier must not stay connected to CP buffers.
+  if package.loaded.claudecode then
+    pcall(vim.cmd, "ClaudeCodeStop")
+  end
 end
 
 ---competitest's C++ arguments: the sanitized profile, plus its PCH when one

@@ -3,6 +3,7 @@
 # determinate-nixd runs automatic garbage collection; only additions live here.
 {
   inputs,
+  lib,
   pkgs,
   ...
 }: {
@@ -29,6 +30,9 @@
       # `<nixpkgs>` resolves through the pinned registry entry below instead of
       # Determinate's weekly FlakeHub tarball.
       nix-path = "nixpkgs=flake:nixpkgs";
+      # Pinning a registry entry makes the module point flake-registry at the
+      # local file; keep Determinate's global registry (templates#, etc.).
+      flake-registry = lib.mkForce "https://install.determinate.systems/flake-registry/stable/flake-registry.json";
     };
     # `nix shell nixpkgs#foo` uses this flake's locked (already cached) nixpkgs.
     registry.nixpkgs.flake = inputs.nixpkgs;
@@ -38,7 +42,6 @@
   # garbage they leave behind.
   launchd.daemons.nh-clean = {
     command = "${pkgs.nh}/bin/nh clean all --keep 3 --keep-since 14d --no-gcroots --no-gc --elevation-strategy none";
-    path = [pkgs.nh "/nix/var/nix/profiles/default"];
     serviceConfig = {
       StartCalendarInterval = [
         {

@@ -315,7 +315,7 @@ in {
                 icon = " ";
                 key = "s";
                 desc = "Restore Session";
-                section = "session";
+                action = ":lua require('lz.n').trigger_load('persistence.nvim'); require('persistence').load()";
               }
               {
                 icon = " ";

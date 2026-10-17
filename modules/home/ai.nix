@@ -14,9 +14,13 @@
 
   home.sessionVariables.DISABLE_AUTOUPDATER = "1"; # claude-code updates with the flake
 
+  # Edits made through the apps are kept as <file>.hm-backup before replacing.
   home.activation.agentInstructions = lib.hm.dag.entryAfter ["writeBoundary"] ''
-    for f in .claude/CLAUDE.md .codex/AGENTS.md; do
-      run install -Dm644 ${./agents.md} "$HOME/$f"
+    for f in "$HOME/.claude/CLAUDE.md" "$HOME/.codex/AGENTS.md"; do
+      if ! cmp -s ${./agents.md} "$f"; then
+        if [ -e "$f" ]; then run cp "$f" "$f.hm-backup"; fi
+        run install -Dm644 ${./agents.md} "$f"
+      fi
     done
   '';
 }
