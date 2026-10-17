@@ -22,6 +22,7 @@
     pnpm
     wrangler
     uv
+    python3 # global fallback; projects use their uv-managed .venv
     ast-grep
   ];
 
