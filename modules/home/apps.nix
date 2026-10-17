@@ -86,30 +86,4 @@ in {
       fullAppDisplay
     ];
   };
-
-  # Brave itself is a Homebrew cask (self-updating); this only declares the
-  # extensions so a fresh profile installs them. Their settings stay in the profile.
-  programs.brave = {
-    enable = true;
-    package = null;
-    extensions = map (id: {inherit id;}) [
-      "pejdijmoenmkgeppbflobdenhhabjlaj" # iCloud Passwords
-      "eimadpbcbfnmbkopoojfekhnkhdbieeh" # Dark Reader
-      "mnjggcdmjocbbbhaepdhchncahnbgone" # SponsorBlock
-      "gebbhagfogifgggkldgodflihgfeippi" # Return YouTube Dislike
-      "ogkoifddpkoabehfemkolflcjhklmkge" # Tweaks for YouTube
-      "ihienfbdfdamhmhhiokjnjmpjgbenedg" # Canvas Refined
-      "aefkmifgmaafnojlojpnekbpbmjiiogg" # Popup Blocker (strict)
-      "hhfnghjdeddcfegfekjeihfmbjenlomm" # Web Activity Time Tracker
-      "eikknpnckalfaafkjkkjbikfbkbkdnfc" # Zelix
-    ];
-  };
-
-  # WXT/web-ext: launch Brave with a persistent per-project dev profile.
-  home.file."web-ext.config.ts".text = ''
-    export default {
-      binaries: { chrome: "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser" },
-      chromiumArgs: ["--user-data-dir=./.wxt/brave-data", "--no-first-run", "--no-default-browser-check"],
-    };
-  '';
 }
