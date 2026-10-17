@@ -7,6 +7,7 @@
     inputs.nixvim.homeModules.nixvim
     ./options.nix
     ./ui.nix
+    ./editing.nix
   ];
 
   programs.nixvim = {
