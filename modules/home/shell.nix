@@ -137,6 +137,12 @@ in {
         ndb = "nh darwin build";
         ndu = "nh darwin switch --update";
         ndev = "nix develop -c fish";
+        ns = "nh search";
+        npa = "nix profile add nixpkgs#";
+        npr = "nix profile remove";
+        npl = "nix profile list";
+        br = "bun run";
+        bx = "bunx";
         cat = "bat --style=plain --paging=never";
         top = "btm";
         du = "dust";

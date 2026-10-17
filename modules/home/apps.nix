@@ -2,6 +2,7 @@
 # ~/Applications/Home Manager Apps (targets.darwin.copyApps), so Spotlight and
 # Raycast index real bundles and nothing is ever launched from /nix/store.
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -10,6 +11,8 @@
   c = import ../theme.nix;
   hex = lib.removePrefix "#";
   spice = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
+  duti = lib.getExe pkgs.duti;
 
   # Same treatment for apps added imperatively with `nix profile add`: mirror
   # ~/.nix-profile/Applications into a directory this script owns exclusively,
@@ -19,8 +22,9 @@
     dst="$HOME/Applications/Nix Profile Apps"
     [ -d "$src" ] || src=$(mktemp -d)
     mkdir -p "$dst"
-    exec ${lib.getExe pkgs.rsync} --recursive --checksum --perms --links \
+    ${lib.getExe pkgs.rsync} --recursive --checksum --perms --links \
       --copy-unsafe-links --specials --delete --chmod=+w "$src/" "$dst/"
+    ${lsregister} -R -f "$dst"
   '';
 in {
   imports = [inputs.spicetify-nix.homeManagerModules.spicetify];
@@ -31,6 +35,17 @@ in {
     qbittorrent
     mpv # configuration stays user-owned in ~/.config/mpv (its scripts write state there)
   ];
+
+  # Make LaunchServices see the freshly copied bundles, then claim video files
+  # for mpv (only when another app currently owns them).
+  home.activation.defaultApps = lib.hm.dag.entryAfter ["copyApps"] ''
+    run ${lsregister} -R -f ${lib.escapeShellArg "${config.home.homeDirectory}/${config.targets.darwin.copyApps.directory}"}
+    for ext in mkv mp4 m4v mov webm avi; do
+      if [[ "$(${duti} -x "$ext" 2>/dev/null | /usr/bin/sed -n 3p)" != io.mpv ]]; then
+        run ${duti} -s io.mpv ".$ext" all
+      fi
+    done
+  '';
 
   launchd.agents.nix-profile-apps = {
     enable = true;

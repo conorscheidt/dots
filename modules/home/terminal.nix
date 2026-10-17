@@ -58,8 +58,11 @@ in {
       window-padding-balance = true;
       window-padding-color = "extend";
       window-save-state = "never";
-      macos-titlebar-style = "transparent";
-      macos-titlebar-proxy-icon = "hidden";
+      macos-titlebar-style = "hidden"; # tmux shows the session; Ctrl-Cmd-drag moves windows
+      macos-icon = "custom-style";
+      macos-icon-ghost-color = c.fg;
+      macos-icon-screen-color = c.bg0;
+      resize-overlay = "never";
       macos-option-as-alt = true;
       background-opacity = 0.985;
       mouse-hide-while-typing = true;
