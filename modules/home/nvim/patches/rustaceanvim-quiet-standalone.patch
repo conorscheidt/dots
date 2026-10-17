@@ -1,0 +1,17 @@
+--- a/lua/rustaceanvim/lsp/init.lua
++++ b/lua/rustaceanvim/lsp/init.lua
+@@ -127,14 +127,6 @@
+         )
+         return
+       end
+-      vim.notify(
+-        [[
+-rustaceanvim:
+-No project root found.
+-Starting rust-analyzer client in detached/standalone mode (with reduced functionality).
+-]],
+-        vim.log.levels.INFO
+-      )
+       root_dir = vim.fs.dirname(bufname)
+       standalone = true
+     end

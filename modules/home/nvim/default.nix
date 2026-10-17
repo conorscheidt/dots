@@ -9,6 +9,7 @@
     ./ui.nix
     ./editing.nix
     ./completion.nix
+    ./lsp.nix
   ];
 
   programs.nixvim = {

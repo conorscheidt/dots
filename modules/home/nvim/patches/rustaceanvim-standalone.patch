@@ -1,0 +1,103 @@
+rustaceanvim: standalone files and non-rustup sysroots
+
+- Standalone .rs files share one client that lists them in rust-analyzer's
+  linkedProjects (reloaded on didChangeConfiguration), instead of attaching to
+  the first client as an extra workspace folder, which never analyses them
+  (https://github.com/mrcjkb/rustaceanvim/issues/190).
+- Cargo workspaces are never added to the standalone client, nor standalone
+  directories to a Cargo client.
+- Standard library sources under */lib/rustlib/src/rust/ (fenix, nixpkgs)
+  reuse the active client, as ~/.rustup toolchains already do, instead of
+  adding library/ as a workspace.
+
+--- a/lua/rustaceanvim/cargo.lua
++++ b/lua/rustaceanvim/cargo.lua
+@@ -103,13 +103,20 @@
+   local rustup_home = vim.uv.os_getenv('RUSTUP_HOME') or vim.fs.joinpath(vim.env.HOME, '.rustup')
+   local toolchains = vim.fs.joinpath(rustup_home, 'toolchains')
+ 
++  local function active_root()
++    local clients = rust_analyzer.get_active_rustaceanvim_clients()
++    return clients and #clients > 0 and clients[#clients].config.root_dir or nil
++  end
+   for _, item in ipairs { toolchains, registry, checkouts } do
+     item = os.normalize_path_on_windows(item)
+     if file_name:sub(1, #item) == item then
+-      local clients = rust_analyzer.get_active_rustaceanvim_clients()
+-      return clients and #clients > 0 and clients[#clients].config.root_dir or nil
++      return active_root()
+     end
+   end
++  -- Standard library sources of toolchains not managed by rustup (e.g. Nix).
++  if os.normalize_path_on_windows(file_name):find('/lib/rustlib/src/rust/', 1, true) then
++    return active_root()
++  end
+ end
+ 
+ ---Attempts to find the root for an existing active client. If no existing
+--- a/lua/rustaceanvim/lsp/init.lua
++++ b/lua/rustaceanvim/lsp/init.lua
+@@ -20,7 +20,16 @@
+   end
+ end
+ 
++---rust-analyzer cannot add detached files to a running server, but it reloads
++---`linkedProjects`, which accepts standalone `.rs` files, when its configuration
++---changes. So every standalone file shares one client that links them all.
+ ---@param client vim.lsp.Client
++---@return boolean
++local function is_standalone_client(client)
++  return client.config.rustaceanvim_standalone == true
++end
++
++---@param client vim.lsp.Client
+ ---@param root_dir string
+ ---@return boolean
+ local function is_in_workspace(client, root_dir)
+@@ -105,6 +114,7 @@
+   ---@type rustaceanvim.lsp.StartConfig
+   local lsp_start_config = vim.tbl_deep_extend('force', {}, client_config)
+   cargo.get_config_root_dir(client_config, bufname, function(root_dir)
++    local standalone = false
+     if not root_dir then
+       if not client_config.standalone then
+         vim.notify(
+@@ -126,7 +136,7 @@
+         vim.log.levels.INFO
+       )
+       root_dir = vim.fs.dirname(bufname)
+-      lsp_start_config.init_options = { detachedFiles = { bufname } }
++      standalone = true
+     end
+     root_dir = os.normalize_path_on_windows(root_dir)
+     lsp_start_config.root_dir = root_dir
+@@ -134,9 +144,28 @@
+     lsp_start_config.settings = get_start_settings(root_dir, client_config)
+     configure_file_watcher(lsp_start_config)
+ 
++    if standalone then
++      local file = os.normalize_path_on_windows(bufname)
++      for _, client in pairs(rust_analyzer.get_active_rustaceanvim_clients()) do
++        if is_standalone_client(client) then
++          local ra_settings = client.settings['rust-analyzer']
++          if not vim.list_contains(ra_settings.linkedProjects, file) then
++            table.insert(ra_settings.linkedProjects, file)
++            client:notify('workspace/didChangeConfiguration', { settings = client.settings })
++          end
++          vim.lsp.buf_attach_client(bufnr, client.id)
++          return
++        end
++      end
++      lsp_start_config.settings['rust-analyzer'] = lsp_start_config.settings['rust-analyzer'] or {}
++      lsp_start_config.settings['rust-analyzer'].linkedProjects = { file }
++      lsp_start_config.rustaceanvim_standalone = true
++    end
++
+     -- Check if a client is already running and add the workspace folder if necessary.
++    -- Standalone files and the standalone client are never mixed with Cargo workspaces.
+     for _, client in pairs(rust_analyzer.get_active_rustaceanvim_clients()) do
+-      if root_dir and not is_in_workspace(client, root_dir) then
++      if not standalone and not is_standalone_client(client) and root_dir and not is_in_workspace(client, root_dir) then
+         local workspace_folder = { uri = vim.uri_from_fname(root_dir), name = root_dir }
+         local params = {
+           event = {
