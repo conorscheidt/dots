@@ -24,6 +24,8 @@
     uv
     python3 # global fallback; projects use their uv-managed .venv
     ast-grep
+    typescript-language-server # Claude/Codex typescript-lsp plugins
+    typescript
   ];
 
   home.sessionVariables.RUST_BACKTRACE = "1";

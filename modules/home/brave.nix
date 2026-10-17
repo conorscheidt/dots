@@ -138,6 +138,7 @@
       exit 0
     fi
     merge() { # file, JSON patch: deep-merge, write atomically only on change
+      [ -e "$1.pre-nix" ] || cp -p "$1" "$1.pre-nix" # first run keeps the original
       tmp=$(mktemp "$1.XXXXXX")
       ${jq} -c --argjson p "$2" '. * $p' "$1" > "$tmp"
       if cmp -s <(${jq} -S . "$1") <(${jq} -S . "$tmp"); then
