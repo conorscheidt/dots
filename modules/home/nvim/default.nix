@@ -11,6 +11,7 @@
     ./completion.nix
     ./lsp.nix
     ./format.nix
+    ./debug.nix
   ];
 
   programs.nixvim = {
