@@ -70,6 +70,23 @@
       showDesktopGestureEnabled = false;
       showLaunchpadGestureEnabled = false;
       showMissionControlGestureEnabled = true;
+      # Declared so tiles always point at the installed copies (Nix apps live
+      # in ~/Applications/Home Manager Apps).
+      persistent-apps = let
+        hm = app: "/Users/conor/Applications/Home Manager Apps/${app}.app";
+      in [
+        "/Applications/Safari.app"
+        "/Applications/Brave Browser.app"
+        "/System/Applications/Messages.app"
+        "/System/Applications/Mail.app"
+        (hm "Spotify")
+        (hm "Ghostty")
+        "/Applications/NordVPN.app"
+        "/System/Applications/System Settings.app"
+        "/Applications/Claude.app"
+        "/Applications/ChatGPT.app"
+        "/Applications/Muse.app"
+      ];
     };
 
     finder = {
