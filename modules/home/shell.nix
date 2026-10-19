@@ -90,6 +90,9 @@ in {
       '';
 
       functions = {
+        # The cursor shape already shows the vi mode (block/line/underscore).
+        fish_mode_prompt = "";
+
         fish_user_key_bindings = ''
           fish_vi_key_bindings
           for mode in default insert visual
