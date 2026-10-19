@@ -1,36 +1,24 @@
-# Zathura (GTK4, MuPDF backend) as a native macOS app bundle. The real Mach-O
-# lives inside Zathura.app so the Dock, menu bar and LaunchServices see one
-# app; Finder "open" Apple Events reach it through GTK's application:openFiles:.
+# GTK3 Zathura matches the macOS tap's verified trackpad/momentum behavior.
+# The GTK4 port intercepts scroll events without preserving native momentum
+# (pwmt/zathura#888); its generic GTK inertia also differs from AppKit.
 {
   lib,
   stdenv,
   writeText,
-  zathuraPkgs,
-  wrapGAppsHook4,
-  gtk4,
+  callPackage,
+  wrapGAppsHook3,
+  gtk3,
   gsettings-desktop-schemas,
   file,
 }: let
-  scope = zathuraPkgs.overrideScope (_: prev: {
-    zathura_core = prev.zathura_core.overrideAttrs (finalAttrs: old: {
-      # NixOS/nixpkgs#574439 (fix pending in #568046): meson's
-      # auto_features=enabled turns the X11/Wayland test suites into hard
-      # requirements on darwin, where their xvfb-run/weston inputs are absent.
-      # Added only until nixpkgs passes these flags itself.
-      mesonFlags =
-        old.mesonFlags
-        ++ lib.optionals (!lib.any (lib.hasPrefix "-Dtests-x11") old.mesonFlags) [
-          (lib.mesonEnable "tests-x11" finalAttrs.doCheck)
-          (lib.mesonEnable "tests-wayland" finalAttrs.doCheck)
-        ];
-      # One document per process: a second Finder open spawns a new instance
-      # instead of failing silently in the running one.
-      patches = (old.patches or []) ++ [./darwin-open-in-new-instance.patch];
-      # The app bundle below wraps the real binary itself.
-      dontWrapGApps = true;
-    });
-  });
-  core = scope.zathura_core;
+  # Recipes from nixpkgs 35d4d899932bf76482b54888fbaa201cfb093e31,
+  # using this flake's current dependencies. Versions match homebrew-zathura.
+  girara = callPackage ./gtk3/girara.nix {};
+  core = callPackage ./gtk3/core.nix {inherit girara;};
+  plugin = callPackage ./gtk3/pdf-mupdf.nix {
+    inherit girara;
+    zathura_core = core;
+  };
   infoPlist = writeText "Info.plist" (lib.generators.toPlist {escape = true;} {
     CFBundleDevelopmentRegion = "en";
     CFBundleDisplayName = "Zathura";
@@ -61,9 +49,8 @@ in
     inherit (core) version;
     dontUnpack = true;
     dontWrapGApps = true; # wrapped by hand below, inside the bundle
-    nativeBuildInputs = [wrapGAppsHook4];
-    buildInputs = [gtk4 gsettings-desktop-schemas];
-    env.GDK_PIXBUF_MODULE_FILE = core.env.GDK_PIXBUF_MODULE_FILE;
+    nativeBuildInputs = [wrapGAppsHook3];
+    buildInputs = [gtk3 gsettings-desktop-schemas];
 
     installPhase = ''
       runHook preInstall
@@ -82,11 +69,11 @@ in
 
     postFixup = ''
       contents=$out/Applications/Zathura.app/Contents
-      # --inherit-argv0: the open-in-new-instance patch re-executes argv[0].
+      # Plugin discovery comes from the wrapper, as for other Nix GTK apps.
       makeWrapper $contents/MacOS/zathura-bin $contents/MacOS/zathura \
         "''${gappsWrapperArgs[@]}" \
         --inherit-argv0 \
-        --set ZATHURA_PLUGINS_PATH ${scope.zathura_pdf_mupdf}/lib/zathura \
+        --set ZATHURA_PLUGINS_PATH ${plugin}/lib/zathura \
         --prefix PATH : ${lib.makeBinPath [file]}
       ln -s $contents/MacOS/zathura $out/bin/zathura
     '';

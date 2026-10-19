@@ -1,5 +1,5 @@
 # Gruvbox Material Dark (medium background, material foreground).
-# Options checked against Zathura 2026.07.18 (GTK4).
+# Options checked against Zathura 2026.02.09 (GTK3).
 
 # Reading layout. Saved per-document state takes precedence on reopening.
 set pages-per-row                2
@@ -9,10 +9,8 @@ set adjust-open                  "width"
 set page-h-padding               12
 set page-v-padding               12
 
-# Trackpad: scroll-step and scroll-hstep multiply two-finger movement deltas.
-# Keep both axes equal; 0.5 gives slower, finer panning when zoomed in.
-# Raise both together for faster trackpad scrolling. These also affect hjkl.
-# There is no "smooth-scroll" setting in this version.
+# Match the tested macOS GTK3 setup: equal, restrained panning on both axes.
+# GTK3 preserves AppKit momentum events. These distances also affect hjkl.
 set scroll-step                  0.5
 set scroll-hstep                 0.5
 set scroll-full-overlap          0.10

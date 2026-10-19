@@ -1,0 +1,111 @@
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  meson,
+  ninja,
+  wrapGAppsHook3,
+  pkg-config,
+  gitUpdater,
+  appstream-glib,
+  json-glib,
+  desktop-file-utils,
+  python3,
+  gtk3,
+  girara,
+  gettext,
+  libxml2,
+  check,
+  sqlite,
+  glib,
+  texlive,
+  libintl,
+  libseccomp,
+  file,
+  librsvg,
+  gtk-mac-integration,
+  versionCheckHook,
+}:
+stdenv.mkDerivation (finalAttrs: {
+  pname = "zathura";
+  version = "2026.02.09";
+
+  strictDeps = true;
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "pwmt";
+    repo = "zathura";
+    tag = finalAttrs.version;
+    hash = "sha256-Zkefujp9Ywm7swHNMMvWSV0hKHaMXpJpOcfoL+f6XfE=";
+  };
+
+  outputs = [
+    "bin"
+    "man"
+    "dev"
+    "out"
+  ];
+
+  # Flag list:
+  # https://github.com/pwmt/zathura/blob/master/meson_options.txt
+  mesonFlags = [
+    "-Dmanpages=enabled"
+    "-Dconvert-icon=enabled"
+    "-Dsynctex=enabled"
+    "-Dtests=disabled"
+    # by default, zathura searches for zathurarc under $out/etc
+    "-Dsysconfdir=/etc"
+    # Make sure tests are enabled for doCheck
+    # (lib.mesonEnable "tests" finalAttrs.finalPackage.doCheck)
+    (lib.mesonEnable "seccomp" stdenv.hostPlatform.isLinux)
+    (lib.mesonEnable "landlock" stdenv.hostPlatform.isLinux)
+  ];
+
+  nativeBuildInputs = [
+    meson
+    ninja
+    pkg-config
+    desktop-file-utils
+    python3.pythonOnBuildForHost.pkgs.sphinx
+    gettext
+    wrapGAppsHook3
+    libxml2
+    appstream-glib
+  ];
+
+  buildInputs =
+    [
+      gtk3
+      girara
+      libintl
+      sqlite
+      glib
+      file
+      librsvg
+      check
+      json-glib
+      texlive.bin.core
+    ]
+    ++ lib.optional stdenv.hostPlatform.isLinux libseccomp
+    ++ lib.optional stdenv.hostPlatform.isDarwin gtk-mac-integration;
+
+  patches = [./mac-integration.patch];
+  dontWrapGApps = true; # bundle wraps the real binary
+
+  doCheck = !stdenv.hostPlatform.isDarwin;
+
+  nativeInstallCheckInputs = [versionCheckHook];
+  doInstallCheck = true;
+
+  passthru.updateScript = gitUpdater {};
+
+  meta = {
+    homepage = "https://pwmt.org/projects/zathura";
+    description = "Core component for zathura PDF viewer";
+    license = lib.licenses.zlib;
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [mithicspirit];
+    mainProgram = "zathura";
+  };
+})

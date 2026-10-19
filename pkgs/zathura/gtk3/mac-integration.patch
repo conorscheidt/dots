@@ -1,0 +1,171 @@
+diff --git a/data/zsh-completion.in b/data/zsh-completion.in
+index fe621cb..bbe9d07 100644
+--- a/data/zsh-completion.in
++++ b/data/zsh-completion.in
+@@ -26,21 +26,21 @@ _arguments -C -s -S "$all_opts[@]" && ret=0
+ 
+ local PLUGIN
+ local -a exts
+-for PLUGIN in @PLUGINDIR@/lib*.so; do
++for PLUGIN in @PLUGINDIR@/lib*.dylib; do
+   case ${PLUGIN##*/} in
+-    libpdf-poppler.so)
++    libpdf-poppler.dylib)
+       exts+=( pdf PDF )
+       ;;
+-    libpdf-mupdf.so)
++    libpdf-mupdf.dylib)
+       exts+=( pdf PDF epub oxps )
+       ;;
+-    libps.so)
++    libps.dylib)
+       exts+=( ps eps epsi epsf )
+       ;;
+-    libdjvu.so)
++    libdjvu.dylib)
+       exts+=( djvu djv )
+       ;;
+-    libcb.so)
++    libcb.dylib)
+       exts+=( cb7 cbr cbz cbt rar zip 7z tar )
+       ;;
+   esac
+diff --git a/meson.build b/meson.build
+index eecb9c1..f2c9018 100644
+--- a/meson.build
++++ b/meson.build
+@@ -74,10 +74,6 @@ defines = [
+   '-D_DEFAULT_SOURCE',
+ ]
+ 
+-if host_machine.system() == 'darwin'
+-  defines += '-DGTKOSXAPPLICATION'
+-endif
+-
+ # compile flags
+ flags = [
+   '-Werror=implicit-function-declaration',
+@@ -156,6 +152,15 @@ headers = files(
+ )
+ headers += version_header
+ 
++if host_machine.system() == 'darwin'
++  sources += files(
++    'zathura/mac-integration.c',
++  )
++  sources += files(
++    'zathura/mac-integration.h',
++  )
++endif
++
+ # zathura helper library
+ libzathura = static_library('zathura',
+   sources + ['zathura/database-sqlite.c'],
+diff --git a/zathura/mac-integration.c b/zathura/mac-integration.c
+--- /dev/null
++++ b/zathura/mac-integration.c
+@@ -0,0 +1,48 @@
++/* SPDX-License-Identifier: Zlib */
++
++#include <girara/log.h>
++#include <glib.h>
++#include <gtkosxapplication.h>
++
++#include "mac-integration.h"
++
++#include "shortcuts.h"
++#include "zathura.h"
++
++
++static gboolean openfile_callback(GtkosxApplication* app, gchar* path, zathura_t* zathura);
++
++
++void zathura_mac_init(zathura_t* zathura) {
++  GtkosxApplication* zathura_mac = g_object_new(GTKOSX_TYPE_APPLICATION, NULL);
++  gtkosx_application_set_use_quartz_accelerators(zathura_mac, FALSE);
++  gtkosx_application_ready(zathura_mac);
++
++  g_signal_connect(G_OBJECT(zathura_mac), "NSApplicationOpenFile", G_CALLBACK(openfile_callback), zathura);
++}
++
++static gboolean openfile_callback(GtkosxApplication* UNUSED(app), gchar* path, zathura_t* zathura) {
++  if (zathura_has_document(zathura) == false) {
++    document_open_idle(zathura, path, NULL, ZATHURA_PAGE_NUMBER_UNSPECIFIED, NULL, NULL, NULL, NULL);
++    return true;
++  }
++
++  pid_t pid = fork();
++
++  if (pid == 0) { /* child */
++    if (setsid() == -1) {
++      girara_error("Could not start new process group: %s", strerror(errno));
++    }
++
++    char *args[] = { gtkosx_application_get_executable_path(), path, NULL };
++    execv(args[0], args);
++
++    girara_error("Could not replaces process image: %s", strerror(errno));
++    exit(1);
++  } else if (pid < 0) { /* error */
++    girara_error("Could not fork: %s", strerror(errno));
++    /* Should we somehow notify user about this situation? */
++  }
++
++  return true;
++}
+diff --git a/zathura/mac-integration.h b/zathura/mac-integration.h
+new file mode 100644
+index 0000000..07365e6
+--- /dev/null
++++ b/zathura/mac-integration.h
+@@ -0,0 +1,15 @@
++/* SPDX-License-Identifier: Zlib */
++
++#ifndef MAC_INTEGRATION_H
++#define MAC_INTEGRATION_H
++
++#include "zathura.h"
++
++/**
++ * Initializes zathura OSX integration
++ *
++ * @param zathura The zathura session
++ */
++void zathura_mac_init(zathura_t* zathura);
++
++#endif /* MAC_INTEGRATION_H */
+diff --git a/zathura/main.c b/zathura/main.c
+index 8f7b0d8..2f983c7 100644
+--- a/zathura/main.c
++++ b/zathura/main.c
+@@ -1,7 +1,7 @@
+ /* SPDX-License-Identifier: Zlib */
+ 
+-#ifdef GTKOSXAPPLICATION
+-#include <gtkosxapplication.h>
++#ifdef MAC_INTEGRATION
++#include "mac-integration.h"
+ #endif
+ 
+ #include <girara/settings.h>
+@@ -259,17 +259,9 @@ GIRARA_VISIBLE int main(int argc, char* argv[]) {
+     return -1;
+   }
+ 
+-#ifdef GTKOSXAPPLICATION
+-  GtkosxApplication* zathuraApp = g_object_new(GTKOSX_TYPE_APPLICATION, NULL);
+-  gtkosx_application_set_use_quartz_accelerators(zathuraApp, FALSE);
+-  gtkosx_application_ready(zathuraApp);
+-  {
+-    const gchar* id = gtkosx_application_get_bundle_id();
+-    if (id != NULL) {
+-      girara_warning("TestIntegration Error! Bundle has ID %s", id);
+-    }
+-  }
+-#endif // GTKOSXAPPLICATION
++#ifdef MAC_INTEGRATION
++  zathura_mac_init(zathura);
++#endif
+ 
+   /* run zathura */
+   gtk_main();
