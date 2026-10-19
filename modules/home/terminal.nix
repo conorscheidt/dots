@@ -173,6 +173,8 @@ in {
       # Look: one flat bar on top (a tab bar under Ghostty's hidden titlebar,
       # clear of Neovim's statusline), colour carries state, no blocks.
       set -g status-position top
+      set -g status 2 # the second status line is a blank spacer under the bar
+      set -g status-format[1] ""
       set -g status-justify left
       set -g status-style 'bg=default,fg=${c.grey1}'
       set -g status-left-length 32
