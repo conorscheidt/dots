@@ -110,12 +110,14 @@ in {
         # prefix F: hint-select any URL, path, hash or number on screen and copy it.
         plugin = pkgs.tmuxPlugins.fingers;
         extraConfig = ''
+          # fingers only parses named/indexed colours; Ghostty maps these to
+          # the Gruvbox Material palette (colour8 = grey).
           set -g @fingers-key F
-          set -g @fingers-hint-style 'fg=${c.orange},bold'
-          set -g @fingers-highlight-style 'fg=${c.yellow}'
-          set -g @fingers-selected-hint-style 'fg=${c.green},bold'
-          set -g @fingers-selected-highlight-style 'fg=${c.green}'
-          set -g @fingers-backdrop-style 'fg=${c.grey0}'
+          set -g @fingers-hint-style 'fg=red,bold'
+          set -g @fingers-highlight-style 'fg=yellow'
+          set -g @fingers-selected-hint-style 'fg=green,bold'
+          set -g @fingers-selected-highlight-style 'fg=green'
+          set -g @fingers-backdrop-style 'fg=colour8'
         '';
       }
     ];
