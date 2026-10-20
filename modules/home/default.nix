@@ -5,6 +5,7 @@
     ./terminal.nix
     ./dev.nix
     ./apps.nix
+    ./spotify.nix
     ./brave.nix
     ./zathura.nix
     ./ai.nix

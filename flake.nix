@@ -24,10 +24,8 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    spicetify-nix = {
-      url = "github:Gerg-L/spicetify-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # Keep SpotX's tested Spotify/patcher pair together across updates.
+    spotx-nix.url = "github:SpotX-Official/SpotX-Nix";
   };
 
   outputs = inputs @ {

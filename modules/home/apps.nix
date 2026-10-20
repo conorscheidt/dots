@@ -3,14 +3,10 @@
 # Raycast index real bundles and nothing is ever launched from /nix/store.
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
 }: let
-  c = import ../theme.nix;
-  hex = lib.removePrefix "#";
-  spice = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
   lsregister = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister";
   duti = lib.getExe pkgs.duti;
 
@@ -27,8 +23,6 @@
     ${lsregister} -R -f "$dst"
   '';
 in {
-  imports = [inputs.spicetify-nix.homeManagerModules.spicetify];
-
   home.packages = with pkgs; [
     slack
     betterdisplay
@@ -55,35 +49,5 @@ in {
       RunAtLoad = true;
       ThrottleInterval = 5;
     };
-  };
-
-  programs.spicetify = {
-    enable = true;
-    theme = spice.themes.dribbblish;
-    colorScheme = "custom";
-    customColorScheme = {
-      text = hex c.fg;
-      subtext = hex c.grey2;
-      main = hex c.bg0;
-      sidebar = hex c.bg1;
-      player = hex c.bg0;
-      card = hex c.bg1;
-      shadow = hex c.bg_dim;
-      selected-row = hex c.bg3;
-      button = hex c.orange;
-      button-active = hex c.aqua;
-      button-disabled = hex c.grey0;
-      tab-active = hex c.bg3;
-      notification = hex c.bg3;
-      notification-error = hex c.red;
-      misc = hex c.grey1;
-    };
-    enabledExtensions = with spice.extensions; [
-      adblockify
-      hidePodcasts
-      shuffle
-      keyboardShortcut
-      fullAppDisplay
-    ];
   };
 }
