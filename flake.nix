@@ -61,6 +61,7 @@
       packages.${system} = {
         default = viator.system;
         nvim = nvim.package;
+        inherit (pkgs) serato-dj-lite;
       };
 
       checks.${system} = {

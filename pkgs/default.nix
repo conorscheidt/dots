@@ -1,4 +1,6 @@
 final: prev: {
+  # Serato DJ Lite drives the Mixtrack; the house DDJ-FLX10 needs Serato DJ Pro (hardware-unlocked), same library.
+  serato-dj-lite = final.callPackage ./serato-dj-lite { };
   instant-space-switcher =
     final.lib.warnIf (final.lib.versionAtLeast prev.instant-space-switcher.version "3.1")
       "instant-space-switcher: nixpkgs has ${prev.instant-space-switcher.version}; drop the override in pkgs/default.nix"
