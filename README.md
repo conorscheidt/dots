@@ -21,3 +21,7 @@ undeclared Homebrew packages.
 
 Use `nix develop` for the Nix language tools, `nix fmt .` to format, and
 `nix build .#nvim` to build the editor separately.
+
+Serato DJ Lite requires a one-time installer download from Serato. If the
+installer is missing from the store, the build prints the download and import
+instructions. Build it separately with `nix build .#serato-dj-lite`.

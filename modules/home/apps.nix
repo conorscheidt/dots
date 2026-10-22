@@ -39,6 +39,7 @@ in {
     qbittorrent
     mpv # configuration stays user-owned in ~/.config/mpv (its scripts write state there)
     instantSpaceSwitcher
+    (callPackage ../../pkgs/serato-dj-lite {})
   ];
 
   targets.darwin.defaults."com.interversehq.InstantSpaceSwitcher" = {
