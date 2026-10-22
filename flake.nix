@@ -65,6 +65,23 @@
 
       checks.${system} = {
         nvim = nvim.test;
+        source =
+          pkgs.runCommand "source-checks"
+            {
+              src = ./.;
+              nativeBuildInputs = with pkgs; [
+                nixfmt
+                deadnix
+                statix
+              ];
+            }
+            ''
+              cd "$src"
+              nixfmt --check flake.nix hosts modules pkgs
+              deadnix --fail .
+              statix check .
+              touch "$out"
+            '';
       };
 
       formatter.${system} = pkgs.nixfmt-tree;
