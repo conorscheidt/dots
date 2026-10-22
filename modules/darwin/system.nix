@@ -170,6 +170,21 @@ in {
     CustomUserPreferences = {
       # Cmd-Space belongs to Raycast.
       "com.apple.symbolichotkeys".AppleSymbolicHotKeys = {
+        # Cmd-Shift-4 copies a selection; add Control to save it as a file.
+        "30" = {
+          enabled = true;
+          value = {
+            parameters = [52 21 1441792];
+            type = "standard";
+          };
+        };
+        "31" = {
+          enabled = true;
+          value = {
+            parameters = [52 21 1179648];
+            type = "standard";
+          };
+        };
         "64".enabled = false;
         "65".enabled = false;
       };
