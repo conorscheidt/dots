@@ -234,14 +234,7 @@ in {
               lang = {
                 updateImportsOnFileMove.enabled = "always";
                 suggest.completeFunctionCalls = true;
-                inlayHints = {
-                  enumMemberValues.enabled = true;
-                  functionLikeReturnTypes.enabled = true;
-                  parameterNames.enabled = "literals";
-                  parameterTypes.enabled = true;
-                  propertyDeclarationTypes.enabled = true;
-                  variableTypes.enabled = false;
-                };
+                inlayHints = tsInlayHints;
               };
             in {
               complete_function_calls = true;
@@ -325,6 +318,7 @@ in {
             options = {
               nix-darwin.expr = "${flake}.darwinConfigurations.${host}.options";
               home-manager.expr = "${flake}.darwinConfigurations.${host}.options.home-manager.users.type.getSubOptions [ ]";
+              nixvim.expr = "(${flake}.inputs.nixvim.lib.evalNixvim { system = builtins.currentSystem; }).options";
             };
           };
         };
@@ -439,12 +433,7 @@ in {
           hover = true;
         };
       };
-      # BufReadPre, not BufRead or ft: setup() attaches to a current
-      # Cargo.toml, and lz.n replays BufRead (also for ft triggers) into
-      # crates' own BufRead autocmd, so it attaches twice, both updates fetch
-      # every crate and each "upgrade available" diagnostic shows twice.
-      # Loaded at BufReadPre, setup() sees the still-empty buffer and the real
-      # BufRead does the one update. (Eager loading would cost ~4 ms.)
+      # Loading before BufRead prevents lz.n's event replay from attaching twice.
       lazyLoad.settings.event = "BufReadPre Cargo.toml";
     };
 

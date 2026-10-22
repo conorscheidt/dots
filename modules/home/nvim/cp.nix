@@ -65,24 +65,8 @@ in {
       end
     '';
 
-    filetype.filename.".clangd" = "yaml";
-
-    autoGroups = {
-      cp_indent = {};
-      cp_competitest_wrap = {};
-    };
+    autoGroups.cp_competitest_wrap = {};
     autoCmd = [
-      {
-        event = "FileType";
-        group = "cp_indent";
-        pattern = ["c" "cpp" "objc" "objcpp" "cuda"];
-        callback = fn ''
-          vim.bo.shiftwidth = 4
-          vim.bo.tabstop = 4
-          vim.bo.softtabstop = 4
-          vim.bo.expandtab = true
-        '';
-      }
       {
         # CompetiTest panes hold long paths and outputs: wrap mid-token.
         event = "BufWinEnter";
@@ -123,8 +107,6 @@ in {
       ];
 
     plugins = {
-      lz-n.enable = true;
-
       leetcode = {
         enable = true;
         lazyLoad.settings = {

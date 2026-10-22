@@ -1,34 +1,7 @@
--- Generate a local test harness for a leetcode.nvim solution buffer.
---
--- WHY THIS EXISTS
--- `Leet run` (<leader>jR) ships your code to LeetCode's servers and waits on
--- their judge queue -- seconds per iteration. The local path (<leader>jr,
--- <leader>rr) compiles in ~0.3s with ASan/UBSan, but a LeetCode solution is a
--- bare `class Solution` with no main(), so something must construct the
--- arguments and call the method. This writes that main(). (leetcode.nvim is a
--- client for the judge; local deserialisation is out of its scope.)
---
--- WHERE THE DATA COMES FROM (no guessing, no scraping the source file)
--- leetcode.nvim already holds everything, decoded, in memory:
---   question.q.meta_data                 -- {name, params:[{name,type}], return}
---   question.console.testcase:content()  -- the live testcase buffer
--- Reading the testcase buffer rather than the API means testcases YOU added
--- (e.g. a failing case copied out of a submission result) are included.
--- When no question is open, it falls back to LeetCode's GraphQL API, which
--- serves metaData unauthenticated.
---
--- COVERAGE -- all three metaData shapes LeetCode uses:
---   * plain methods: scalars, strings, and arbitrarily nested vectors
---   * ListNode / TreeNode, built from LeetCode's own serialisation ([1,2,3]
---     for lists; level-order with `null` holes for trees)
---   * "design" problems (LRU Cache, Min Stack, Trie): the `classname` /
---     `methods` shape, dispatched over the ["Ctor","get","put"] call list
--- Anything with an unsupported type reports which type and leaves your manual
--- stub alone, rather than emitting something that half-works.
---
--- OUTPUT
--- Writes input.txt (for <leader>rr) and competitest testcase pairs
--- (for <leader>kr, which diffs actual vs expected and shows pass/fail).
+-- Generate local C++ harnesses and testcase pairs for LeetCode solutions.
+-- Metadata comes from leetcode.nvim or its GraphQL API; examples come from
+-- the live testcase buffer and problem description. Supports methods, node
+-- types and design problems; unsupported types leave the manual stub intact.
 
 local M = {}
 
@@ -75,19 +48,8 @@ local function cpp_type(t)
   return TYPES[t]
 end
 
--- The C++ side. A small recursive-descent parser over LeetCode's JSON-ish
--- input format, emitted verbatim into the harness.
---
--- This replaces an earlier split-on-commas approach, which broke on escaped
--- quotes, commas inside strings, and `null`. This one tracks string state and
--- nesting properly and recurses for nested arrays, so `[["a,b"],["c"]]` and
--- `["say \"hi\""]` both parse correctly.
--- The C++ support code lives in ONE shared header on disk rather than being
--- inlined into every solution. A solution file then carries about four lines
--- of generated code plus its main(), instead of ~150 lines of parser.
---
--- Written to <cp root>/.leetgen/leetgen.hpp, and rewritten whenever
--- HEADER_VERSION changes so an old copy cannot silently persist.
+-- Shared parser and serializers, written to <cp root>/.leetgen/leetgen.hpp.
+-- Bump the version when changing the header so cached copies are replaced.
 local HEADER_VERSION = 1
 
 local HEADER_SRC = [==[

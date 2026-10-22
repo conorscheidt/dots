@@ -1,4 +1,13 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  username = config.system.primaryUser;
+  home = config.users.users.${username}.home;
+  appDirectory = config.home-manager.users.${username}.targets.darwin.copyApps.directory;
+in {
   programs.fish.enable = true;
   environment.shells = [pkgs.fish];
 
@@ -24,6 +33,28 @@
   system.keyboard = {
     enableKeyMapping = true;
     remapCapsLockToEscape = true;
+  };
+
+  home-manager.users.${username} = {
+    # hidutil mappings are lost at reboot; nix-darwin only sets them on activation.
+    launchd.agents.keyboard-remapping = {
+      enable = true;
+      config = {
+        ProgramArguments = [
+          "/usr/bin/hidutil"
+          "property"
+          "--set"
+          (builtins.toJSON {UserKeyMapping = config.system.keyboard.userKeyMapping;})
+        ];
+        RunAtLoad = true;
+      };
+    };
+
+    # nix-darwin's boolean FocusModes option cannot express "Show When Active".
+    targets.darwin.currentHostDefaults."com.apple.controlcenter" = {
+      FocusModes = 2;
+      Sound = config.system.defaults.controlcenter.Sound;
+    };
   };
 
   system.defaults = {
@@ -70,10 +101,8 @@
       showDesktopGestureEnabled = false;
       showLaunchpadGestureEnabled = false;
       showMissionControlGestureEnabled = true;
-      # Declared so tiles always point at the installed copies (Nix apps live
-      # in ~/Applications/Home Manager Apps).
       persistent-apps = let
-        hm = app: "/Users/conor/Applications/Home Manager Apps/${app}.app";
+        hm = app: "${home}/${appDirectory}/${app}.app";
       in [
         "/Applications/Safari.app"
         "/Applications/Brave Browser.app"
@@ -104,29 +133,30 @@
       _FXSortFoldersFirst = true;
     };
 
-    # Menu bar: battery percentage only.
+    # Sound stays visible; Focus appears only while active.
     controlcenter = {
       BatteryShowPercentage = true;
       AirDrop = false;
       Bluetooth = false;
       Display = false;
-      FocusModes = false;
+      FocusModes = null;
       NowPlaying = false;
-      Sound = false;
+      Sound = true;
     };
 
     trackpad = {
       Clicking = true;
       TrackpadRightClick = true;
       TrackpadThreeFingerDrag = false;
-      TrackpadThreeFingerHorizSwipeGesture = 0;
+      TrackpadThreeFingerHorizSwipeGesture = 2;
       TrackpadThreeFingerVertSwipeGesture = 2;
-      TrackpadFourFingerHorizSwipeGesture = 0;
+      # macOS enables both horizontal keys for three-finger desktop switching.
+      TrackpadFourFingerHorizSwipeGesture = 2;
       TrackpadFourFingerVertSwipeGesture = 0;
     };
 
     screencapture = {
-      location = "/Users/conor/Pictures/Screenshots";
+      location = "${home}/Pictures/Screenshots";
       disable-shadow = true;
       show-thumbnail = false;
       target = "file";
@@ -134,7 +164,7 @@
 
     loginwindow.GuestEnabled = false;
     spaces.spans-displays = false;
-    universalaccess.reduceMotion = true;
+    universalaccess.reduceMotion = false;
     WindowManager.EnableStandardClickToShowDesktop = false;
 
     CustomUserPreferences = {
@@ -156,7 +186,7 @@
   };
 
   system.activationScripts.postActivation.text = ''
-    install -d -o conor -g staff /Users/conor/Pictures/Screenshots
+    install -d -o ${lib.escapeShellArg username} -g staff ${lib.escapeShellArg "${home}/Pictures/Screenshots"}
     # Raycast and Spotlight find apps through the metadata index.
     for vol in / /System/Volumes/Data; do
       if ! /usr/bin/mdutil -s "$vol" | grep -q 'Indexing enabled'; then

@@ -1,12 +1,12 @@
-# Homebrew is only a cask installer for apps nixpkgs cannot provide well:
-# Brave (same-day Chromium security updates via its own updater), the
-# Claude and ChatGPT/Codex desktop apps, NordVPN (system extension) and Teams
-# (root .pkg installer). No formulae. Everything else comes from Nix;
-# Amphetamine stays with the App Store; Muse and Raycast Beta update themselves.
-{
+# Casks cover self-updating apps and privileged installers; CLI tools use Nix.
+{config, ...}: {
   nix-homebrew = {
     enable = true;
-    user = "conor";
+    user = config.system.primaryUser;
+    # Casks are managed during activation; interactive shells use Nix tools.
+    enableBashIntegration = false;
+    enableFishIntegration = false;
+    enableZshIntegration = false;
     # Casks and formulae install from the Homebrew API; no tap checkouts.
     mutableTaps = false;
     taps = {};

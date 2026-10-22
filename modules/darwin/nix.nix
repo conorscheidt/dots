@@ -2,6 +2,7 @@
 # lazy-trees, parallel evaluation (eval-cores = 0), max-jobs = auto, and
 # determinate-nixd runs automatic garbage collection; only additions live here.
 {
+  config,
   inputs,
   lib,
   pkgs,
@@ -19,7 +20,7 @@
         "fenix.cachix.org-1:ecJhr+RdYEdcVgUkjruiYhjbBloIEGov7bos90cZi0Q="
       ];
       # Lets project flakes' nixConfig caches apply without a prompt.
-      trusted-users = ["root" "conor"];
+      trusted-users = ["root" config.system.primaryUser];
       # Faster cold substitution; the 64 MiB default stalls on large NARs.
       http-connections = 50;
       max-substitution-jobs = 32;

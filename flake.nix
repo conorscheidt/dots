@@ -39,7 +39,7 @@
       specialArgs = {inherit inputs;};
       modules = [./hosts/viator];
     };
-    nvim = viator.config.home-manager.users.conor.programs.nixvim.build;
+    nvim = viator.config.home-manager.users.${viator.config.system.primaryUser}.programs.nixvim.build;
   in {
     darwinConfigurations.viator = viator;
 
@@ -48,7 +48,20 @@
       nvim = nvim.package;
     };
 
-    checks.${system}.nvim = nvim.test;
+    checks.${system} = {
+      nvim = nvim.test;
+      source =
+        pkgs.runCommand "source-checks" {
+          src = ./.;
+          nativeBuildInputs = with pkgs; [alejandra deadnix statix];
+        } ''
+          cd "$src"
+          alejandra --check flake.nix hosts modules pkgs
+          deadnix --fail .
+          statix check .
+          touch "$out"
+        '';
+    };
 
     formatter.${system} = pkgs.alejandra;
 

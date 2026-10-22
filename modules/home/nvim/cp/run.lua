@@ -1,14 +1,6 @@
 -- Async compile-and-run for single-file solutions (<leader>r*).
---
---   * Output streams into a reusable [run] split, never a blocking `:!`, so
---     Neovim stays interactive while it compiles.
---   * `input.txt` beside the source is piped to stdin.
---   * Binaries go to a cache dir, never next to your solutions.
---   * C++ uses a precompiled <bits/stdc++.h> per sanitizer profile: parsing it
---     is ~85% of a ~0.5s build, so a rebuild drops to ~0.12s.
---
--- macOS arm64: LeakSanitizer is unsupported, so ASan reports no leaks; its
--- memory-error detection and UBSan work.
+-- Reads input.txt, streams output into a split, and caches binaries and PCHs.
+-- LeakSanitizer is unavailable on macOS arm64; ASan and UBSan still run.
 
 local M = {}
 
@@ -140,8 +132,7 @@ function M.pch_is_fresh(dirs, pch)
   return true
 end
 
----Build both profiles (~0.7s each, once). <leader>rP, or automatic on the
----first C++ run.
+---Build both profiles on <leader>rP or the first C++ run.
 ---@param dirs? table from require("cp").paths()
 ---@param cb? fun()
 function M.pch_build(dirs, cb)
@@ -265,7 +256,7 @@ function M.run(opts)
   if ft == "cpp" and not opts.retried then
     local dirs = require("cp").paths(require("cp").root(file))
     if not M.pch_is_fresh(dirs, M.pch_path(dirs, sanitize)) then
-      return M.pch_build(dirs, again) -- once per profile, then every build is ~4x faster
+      return M.pch_build(dirs, again)
     end
   end
 

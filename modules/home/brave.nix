@@ -137,6 +137,8 @@
       echo "brave-apply-config: Brave is running; quit it and run brave-apply-config" >&2
       exit 0
     fi
+    tmp=""
+    trap 'if [ -n "$tmp" ]; then rm -f "$tmp"; fi' EXIT
     merge() { # file, JSON patch: deep-merge, write atomically only on change
       [ -e "$1.pre-nix" ] || cp -p "$1" "$1.pre-nix" # first run keeps the original
       tmp=$(mktemp "$1.XXXXXX")
@@ -146,6 +148,7 @@
       else
         mv "$tmp" "$1" && echo "brave-apply-config: updated $(basename "$1")"
       fi
+      tmp=""
     }
     merge "$dir/Local State" ${lib.escapeShellArg (builtins.toJSON localState)}
     merge "$dir/Default/Preferences" ${lib.escapeShellArg (builtins.toJSON preferences)}

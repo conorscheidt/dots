@@ -1,9 +1,4 @@
-# Debugging (nvim-dap, dap-ui, virtual text) and testing (neotest). nvim-dap
-# and neotest are dependencies of their adapters, so nixvim puts them on the
-# startup path anyway and their plugin/ commands exist from the start: dap is
-# configured eagerly (cheap), neotest right after the first frame (its adapters
-# cost ~12 ms), and only the dap UI waits for a session. Adapters come from nixpkgs: codelldb (C/C++/Rust),
-# js-debug (Node/browser) and debugpy (Python, run with the project's .venv).
+# DAP adapters and neotest; the debug UI loads on the first session.
 {
   config,
   lib,

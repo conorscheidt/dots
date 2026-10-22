@@ -1,5 +1,4 @@
-# Options, core keymaps and autocommands: LazyVim's defaults plus the
-# baseline's own tweaks (rounded borders, scrolloff 8, linebreak).
+# Options, core keymaps and autocommands.
 {config, ...}: let
   map = mode: key: action: desc: {
     inherit mode key action;

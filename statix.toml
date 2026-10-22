@@ -1,0 +1,2 @@
+# Dotted option paths keep independent module settings easy to scan.
+disabled = ["repeated_keys"]

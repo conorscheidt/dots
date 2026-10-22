@@ -1,4 +1,6 @@
-{
+{osConfig, ...}: let
+  username = osConfig.system.primaryUser;
+in {
   imports = [
     ./shell.nix
     ./git.nix
@@ -13,8 +15,8 @@
   ];
 
   home = {
-    username = "conor";
-    homeDirectory = "/Users/conor";
+    inherit username;
+    homeDirectory = osConfig.users.users.${username}.home;
     stateVersion = "26.05";
     sessionVariables = {
       EDITOR = "nvim";
