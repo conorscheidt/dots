@@ -1,4 +1,5 @@
 final: prev: {
+  openfader = final.callPackage ./openfader { };
   # Serato DJ Lite drives the Mixtrack; the house DDJ-FLX10 needs Serato DJ Pro (hardware-unlocked), same library.
   serato-dj-lite = final.callPackage ./serato-dj-lite { };
   instant-space-switcher =
