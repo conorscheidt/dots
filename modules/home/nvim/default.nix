@@ -10,6 +10,7 @@
     ./editing.nix
     ./completion.nix
     ./lsp.nix
+    ./dependencies.nix
     ./format.nix
     ./debug.nix
     ./ai.nix
