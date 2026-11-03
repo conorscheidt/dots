@@ -4,6 +4,7 @@
     ./git.nix
     ./terminal.nix
     ./dev.nix
+    ./vscode.nix
     ./apps.nix
     ./brave.nix
     ./ai.nix
