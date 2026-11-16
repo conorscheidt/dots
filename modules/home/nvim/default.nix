@@ -1,5 +1,6 @@
 {
   inputs,
+  pkgs,
   ...
 }:
 {
@@ -20,6 +21,8 @@
 
   programs.nixvim = {
     enable = true;
+    # Neovim's master branch, built against this flake's nixpkgs.
+    package = inputs.neovim-nightly-overlay.packages.${pkgs.stdenv.hostPlatform.system}.default;
     nixpkgs.useGlobalPackages = true;
     defaultEditor = true;
     viAlias = true;
