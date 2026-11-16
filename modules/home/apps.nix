@@ -21,6 +21,10 @@ let
     ];
   spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
 
+  # An original composition: halftones of a Gustave Doré plate for Paradise
+  # Lost (1866) and NASA's LRO Moon mosaic, both public domain.
+  wallpaper = ./wallpaper.png;
+
   # Spotify 1.3.9 dropped its per-binary entitlements and relies on every
   # binary sharing its Team ID. An ad-hoc signature has none, so the hardened
   # runtime refuses to load the CEF framework unless library validation is off.
@@ -199,6 +203,23 @@ in
     storage.size=1024' "$prefs"
     fi
   '';
+
+  # Runs at login and whenever the image changes. desktoppr prints one path
+  # per display, so the picture is set only when a display shows another.
+  launchd.agents.wallpaper = {
+    enable = true;
+    config = {
+      ProgramArguments = [
+        "${pkgs.writeShellScript "set-wallpaper" ''
+          desktoppr=${lib.getExe pkgs.desktoppr}
+          if "$desktoppr" | /usr/bin/grep -qvxF ${wallpaper}; then
+            exec "$desktoppr" ${wallpaper}
+          fi
+        ''}"
+      ];
+      RunAtLoad = true;
+    };
+  };
 
   launchd.agents.instant-space-switcher = {
     enable = true;
