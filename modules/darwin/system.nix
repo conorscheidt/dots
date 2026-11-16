@@ -67,7 +67,7 @@ in
       AppleEnableMouseSwipeNavigateWithScrolls = false;
       ApplePressAndHoldEnabled = false;
       AppleKeyboardUIMode = 2;
-      KeyRepeat = 2;
+      KeyRepeat = 1; # 15 ms, below what System Settings offers
       InitialKeyRepeat = 15;
       NSAutomaticCapitalizationEnabled = false;
       NSAutomaticDashSubstitutionEnabled = false;
