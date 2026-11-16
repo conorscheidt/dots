@@ -1,0 +1,117 @@
+--- a/src/uosc/elements/Button.lua
++++ b/src/uosc/elements/Button.lua
+@@ -45,13 +45,14 @@
+ 	local background = self.active and self.foreground or self.background
+ 	local background_opacity = self.active and 1 or config.opacity.controls
+ 
+-	if is_hover and is_clickable and background_opacity < 0.3 then background_opacity = 0.3 end
++	if is_hover and is_clickable and background_opacity < 0.18 then background_opacity = 0.18 end
+ 
+-	-- Background
++	-- Background (FORK: inset macOS-style hover pill, softer opacity)
+ 	if background_opacity > 0 then
+-		ass:rect(self.ax, self.ay, self.bx, self.by, {
++		local inset = self.active and 0 or 3
++		ass:rect(self.ax + inset, self.ay + inset, self.bx - inset, self.by - inset, {
+ 			color = (self.active or not is_hover) and background or foreground,
+-			radius = state.radius,
++			radius = math.max(state.radius - 2, 6),
+ 			opacity = visibility * background_opacity,
+ 		})
+ 	end
+--- a/src/uosc/elements/Menu.lua
++++ b/src/uosc/elements/Menu.lua
+@@ -734,8 +734,15 @@
+ 	request_render()
+ end
+ 
+-function Menu:handle_wheel_up() self:scroll_by(self.scroll_step * -3, nil, {update_cursor = true}) end
+-function Menu:handle_wheel_down() self:scroll_by(self.scroll_step * 3, nil, {update_cursor = true}) end
++-- FORK: smooth macOS-trackpad scroll. Small pixel delta per tick (not a whole
++-- item), pure content scroll (no selection jump), longer glide. macOS fires
++-- many wheel events per swipe, so a fraction-of-item step reads as momentum.
++function Menu:handle_wheel_up()
++	self:scroll_by(round(self.item_height * -0.5), nil, {update_cursor = false, duration = 0.22})
++end
++function Menu:handle_wheel_down()
++	self:scroll_by(round(self.item_height * 0.5), nil, {update_cursor = false, duration = 0.22})
++end
+ 
+ ---@param offset integer
+ ---@param menu? MenuStack
+@@ -1491,11 +1498,13 @@
+ 				)
+ 			end
+ 
+-			-- Background
+-			local highlight_opacity = 0 + (item.active and 0.8 or 0) + (is_selected and 0.15 or 0)
++			-- Background (FORK: inset rounded pill, macOS menu style)
++			local highlight_opacity = 0 + (item.active and 0.8 or 0) + (is_selected and 0.18 or 0)
+ 			if highlight_opacity > 0 then
+-				ass:rect(content_rect.ax, item_ay, content_rect.bx, item_by, {
+-					radius = state.radius,
++				local hpad = round(self.item_padding * 0.5)
++				local vpad = math.min(2, round(self.item_spacing))
++				ass:rect(content_rect.ax + hpad, item_ay + vpad, content_rect.bx - hpad, item_by - vpad, {
++					radius = math.max(state.radius - 3, 6),
+ 					color = fg,
+ 					opacity = highlight_opacity * menu_opacity,
+ 					clip = item_clip,
+--- a/src/uosc/lib/menus.lua
++++ b/src/uosc/lib/menus.lua
+@@ -1042,10 +1042,29 @@
+ 				return sub and sub.attributes and sub.attributes.release and type(sub.attributes.files) == 'table' and
+ 					#sub.attributes.files > 0
+ 			end)
++			table.sort(subs, function(a, b)
++				return (tonumber(a.attributes.download_count) or 0) > (tonumber(b.attributes.download_count) or 0)
++			end)
+ 			local items = itable_map(subs, function(sub)
+-				local hints = {sub.attributes.language}
++				local hints = {}
++				-- download count (formatted 12.4k) — primary quality signal
++				local dl = tonumber(sub.attributes.download_count)
++				if dl then
++					hints[#hints + 1] = '⤓ ' .. (dl >= 1000 and string.format('%.1fk', dl / 1000) or tostring(dl))
++				end
++				-- community rating when present (0 votes = unrated, skip)
++				local rating = tonumber(sub.attributes.ratings)
++				local votes = tonumber(sub.attributes.votes)
++				if rating and votes and votes > 0 then
++					hints[#hints + 1] = string.format('★ %.1f', rating)
++				end
++				if sub.attributes.fps and tonumber(sub.attributes.fps) and tonumber(sub.attributes.fps) > 0 then
++					hints[#hints + 1] = string.format('%gfps', sub.attributes.fps)
++				end
++				if sub.attributes.from_trusted then hints[#hints + 1] = t('trusted') end
++				hints[#hints + 1] = sub.attributes.language
+ 				if sub.attributes.foreign_parts_only then hints[#hints + 1] = t('foreign parts only') end
+-				if sub.attributes.hearing_impaired then hints[#hints + 1] = t('hearing impaired') end
++				if sub.attributes.hearing_impaired then hints[#hints + 1] = 'HI' end
+ 				local url = sub.attributes.url
+ 				return {
+ 					title = sub.attributes.release,
+--- a/src/uosc/main.lua
++++ b/src/uosc/main.lua
+@@ -1149,15 +1149,12 @@
+ --[[ ELEMENTS ]]
+ 
+ -- Dynamic elements
+-local constructors = {
+-	window_border = require('elements/WindowBorder'),
+-	buffering_indicator = require('elements/BufferingIndicator'),
+-	pause_indicator = require('elements/PauseIndicator'),
+-	top_bar = require('elements/TopBar'),
+-	timeline = require('elements/Timeline'),
+-	controls = options.controls and options.controls ~= 'never' and require('elements/Controls'),
+-	volume = itable_index_of({'left', 'right'}, options.volume) and require('elements/Volume'),
+-}
++-- FORK: uosc's visible OSC is fully replaced by scripts/osc.lua. Its Timeline,
++-- Controls, TopBar, Volume, and PauseIndicator elements are disabled at the
++-- source so nothing of uosc's own chrome can ever render (no bottom-edge peek).
++-- uosc is kept ONLY as the invisible backend for menus / file browser /
++-- OpenSubtitles (Menu.lua, invoked on demand — not in this constructor map).
++local constructors = {}
+ 
+ -- Required elements
+ require('elements/Curtain'):new()

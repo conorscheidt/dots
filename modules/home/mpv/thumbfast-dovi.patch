@@ -1,0 +1,21 @@
+--- a/thumbfast.lua
++++ b/thumbfast.lua
+@@ -401,7 +401,8 @@
+     local image = properties["current-tracks/video"] and properties["current-tracks/video"]["image"]
+     local albumart = image and properties["current-tracks/video"]["albumart"]
+ 
+-    disabled = (w or 0) == 0 or (h or 0) == 0 or
++    -- The thumbnail worker cannot reshape Dolby Vision Profile 5.
++    disabled = mp.get_property_number("current-tracks/video/dolby-vision-profile") == 5 or (w or 0) == 0 or (h or 0) == 0 or
+         has_vid == 0 or
+         (properties["demuxer-via-network"] and not options.network) or
+         (albumart and not options.audio) or
+@@ -751,7 +752,7 @@
+ activity_timer:kill()
+ 
+ local function thumb(time, r_x, r_y, script)
+-    if disabled then return end
++    if disabled or mp.get_property_number("current-tracks/video/dolby-vision-profile") == 5 then return end
+ 
+     time = tonumber(time)
+     if time == nil then return end

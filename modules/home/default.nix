@@ -6,6 +6,7 @@
     ./dev.nix
     ./vscode.nix
     ./apps.nix
+    ./mpv
     ./brave.nix
     ./ai.nix
     ./nvim
