@@ -8,10 +8,22 @@ let
   tmux = "${config.programs.tmux.package}/bin/tmux";
   reattach = "${pkgs.pam-reattach}/bin/reattach-to-session-namespace";
   toTmux = key: seq: "${key}=text:\\x02${seq}";
+  # The key scheme on one page: `keys`, or Cmd-/ from anywhere. KEYS.md with
+  # its Markdown markers turned into colour.
+  keysPage = pkgs.runCommand "keys.txt" { } ''
+    ${pkgs.gnused}/bin/sed -E \
+      -e 's/^# (.*)/\x1b[1;33m\1\x1b[0m/' \
+      -e 's/^## (.*)/\x1b[1;36m\1\x1b[0m/' \
+      -e 's/`([^`]*)`/\x1b[32m\1\x1b[0m/g' ${../../KEYS.md} > $out
+  '';
+  keys = pkgs.writeShellScriptBin "keys" ''
+    exec ${pkgs.less}/bin/less -R -Ps' q close   / search' ${keysPage}
+  '';
 in
 {
   home.packages = [
     pkgs.sesh
+    keys
   ];
 
   # A project opened from the picker (Cmd-K) starts in Neovim, which resumes
@@ -97,6 +109,7 @@ in
         (toTmux "super+j" "j")
         (toTmux "super+f" "f")
         (toTmux "super+up" "\\x1b[A")
+        (toTmux "super+slash" "/")
         (toTmux "super+digit_1" "1")
         (toTmux "super+digit_2" "2")
         (toTmux "super+digit_3" "3")
@@ -199,6 +212,7 @@ in
         split-window -v -l 30% -c '#{pane_current_path}'
         set -wF @drawer '#{pane_id}'
       }
+      bind / display-popup -E -w 90 -h 90% -T ' keys ' '${keys}/bin/keys'
       set -g status-position top
       set -g status on
       set -g status-justify left
