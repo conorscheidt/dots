@@ -11,6 +11,7 @@
     ../../modules/darwin/nix.nix
     ../../modules/darwin/system.nix
     ../../modules/darwin/apps.nix
+    ../../modules/darwin/t3code.nix
   ];
 
   nixpkgs = {
