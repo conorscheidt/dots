@@ -15,6 +15,7 @@
     ./debug.nix
     ./ai.nix
     ./cp.nix
+    ./latex.nix
   ];
 
   programs.nixvim = {
