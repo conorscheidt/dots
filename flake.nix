@@ -61,7 +61,7 @@
       packages.${system} = {
         default = viator.system;
         nvim = nvim.package;
-        inherit (pkgs) openfader serato-dj-lite;
+        inherit (pkgs) mixxx-bin openfader serato-dj-lite;
       };
 
       checks.${system} = {

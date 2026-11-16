@@ -73,6 +73,7 @@ in
 
   home.packages = [
     pkgs.qbittorrent
+    pkgs.mixxx-bin
     pkgs.openfader
     pkgs.serato-dj-lite
     # DJ library tooling: Soulseek batch fetch, transcode checks, tagging, key detection

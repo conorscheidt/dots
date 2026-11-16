@@ -1,4 +1,6 @@
 final: prev: {
+  # nixpkgs' mixxx builds from source for Linux only.
+  mixxx-bin = final.callPackage ./mixxx-bin { };
   openfader = final.callPackage ./openfader { };
   # Serato DJ Lite drives the Mixtrack; the house DDJ-FLX10 needs Serato DJ Pro (hardware-unlocked), same library.
   serato-dj-lite = final.callPackage ./serato-dj-lite { };
